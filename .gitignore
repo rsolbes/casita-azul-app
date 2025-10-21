@@ -1,0 +1,45 @@
+# Archivos de Sistema (Ignorar en cualquier carpeta)
+.DS_Store
+Thumbs.db
+
+# Logs (Ignorar en cualquier carpeta)
+npm-debug.log
+yarn-error.log
+testem.log
+
+# IDEs y editores (Ignorar en cualquier carpeta)
+.idea/
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+
+# Visual Studio Code (Ignorar en cualquier carpeta)
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.history/*
+
+# --- Backend (Python) ---
+# Ignora el entorno virtual, secretos y compilados DENTRO de la carpeta backend
+backend/venv/
+backend/.env
+backend/__pycache__/
+backend/*.pyc
+
+# --- Frontend (Angular) ---
+# Ignora todo lo pesado DENTRO de la carpeta del frontend
+frontend/casita-azul-admin/node_modules/
+frontend/casita-azul-admin/dist/
+frontend/casita-azul-admin/tmp/
+frontend/casita-azul-admin/out-tsc/
+frontend/casita-azul-admin/bazel-out/
+frontend/casita-azul-admin/.angular/cache/
+frontend/casita-azul-admin/coverage/
+frontend/casita-azul-admin/libpeerconnection.log
+frontend/casita-azul-admin/typings/
+frontend/casita-azul-admin/__screenshots__/
