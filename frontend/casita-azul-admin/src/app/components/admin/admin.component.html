@@ -14,85 +14,96 @@
   </header>
 
   @if (isLoading) {
-    <p>Cargando datos...</p>
+    <p class="loading-message">Cargando datos...</p>
   }
 
   @if (errorMessage) {
-    <div class="error-message">
-      <p>❌ {{ errorMessage }}</p>
+    <div class="error-message alert alert-error"> <p>❌ {{ errorMessage }}</p>
       <button (click)="loadData()">Reintentar carga</button>
     </div>
   }
 
+   @if (successMessage) { <div class="alert alert-success">
+      <p>✅ {{ successMessage }}</p>
+    </div>
+  }
+
+
   @if (!isLoading && !errorMessage) {
 
-    @if (properties.length > 0) {
-      <h2>Propiedades</h2>
+    <div class="actions-bar">
+      @if (!editingProperty && !isNewMode) { <button class="btn-add-property" (click)="showAddForm()">
+           ➕ Agregar Nueva Propiedad
+        </button>
+      }
+    </div>
+
+
+    @if (properties.length > 0 && !editingProperty && !isNewMode) { <h2>Propiedades</h2>
       <div class="table-container">
         <table>
-           <thead>
-             <tr>
-               <th>Imagen</th>
-               <th>Acciones</th>
-               <th>ID</th>
-               <th>Título</th>
-               <th>Tipo Negocio</th>
-               <th>Tipo Propiedad</th>
-               <th>Estado Publicación</th>
-               <th>Precio</th>
-               <th>Agente Asignado</th>
-               <th>Creado</th>
-             </tr>
-           </thead>
-           <tbody>
-             @for (prop of properties; track prop.id) {
-               <tr>
-                 <td class="image-cell">
-                   @if (getPrincipalImage(prop)) {
-                     <img [src]="getPrincipalImage(prop)" alt="Imagen de {{ prop.titulo }}" class="property-thumbnail">
-                   } @else {
-                     <div class="no-image">Sin imagen</div>
-                   }
-                 </td>
-                 <td>
-                   <button (click)="editProperty(prop)">✏️ Editar</button>
-                   <button (click)="deleteProperty(prop.id!)">🗑️ Eliminar</button>
-                 </td>
-                 <td>{{ prop.id }}</td>
-                 <td>{{ prop.titulo }}</td>
-                 <td>{{ getCatalogoNombre('tipos_negocio', prop.tipo_negocio_id) }}</td>
-                 <td>{{ getCatalogoNombre('tipos_propiedad', prop.tipo_propiedad_id) }}</td>
-                 <td>{{ getCatalogoNombre('estados_publicacion', prop.estado_publicacion_id) }}</td>
-                 <td>{{ prop.precio | currency:'USD':'symbol':'1.0-0' }}</td>
-                 <td>{{ getCatalogoNombre('agentes', prop.agente_id) }}</td>
-                 <td>{{ prop.created_at | date:'short' }}</td>
-               </tr>
-             }
-           </tbody>
+          <thead>
+            <tr>
+              <th>Imagen</th>
+              <th>Acciones</th>
+              <th>Título</th>
+              <th>Descripción</th>
+              <th>Ubicación</th>
+              <th>Captado Por</th>
+              <th>Estado Pub.</th>
+              <th>Agente Asignado</th>
+              <th>Agente Externo</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (prop of properties; track prop.id) {
+              <tr>
+                <td class="image-cell">
+                  @if (getPrincipalImage(prop)) {
+                    <img [src]="getPrincipalImage(prop)" alt="Imagen de {{ prop.titulo }}" class="property-thumbnail">
+                  } @else {
+                    <div class="no-image">Sin imagen</div>
+                  }
+                </td>
+                <td>
+                  <button class="btn-edit" (click)="editProperty(prop)">✏️ Editar</button> <button class="btn-delete" (click)="deleteProperty(prop.id!)">🗑️ Eliminar</button> </td>
+                <td>{{ prop.titulo }}</td>
+                <td class="description-cell" title="{{ prop.descripcion }}">
+                  {{ (prop.descripcion || 'N/A') | slice:0:80 }}{{ (prop.descripcion && prop.descripcion.length > 80) ? '...' : '' }}
+                </td>
+                <td>
+                  {{ prop.direccion || 'Sin dirección' }} <br>
+                  <small>{{ getCatalogoNombre('ciudades', prop.ciudad_id) }}, {{ getCatalogoNombre('estados', prop.estado_id) }}</small>
+                </td>
+                <td>{{ getCatalogoNombre('agentes', prop.captado_por_agente_id) }}</td>
+                <td>{{ getCatalogoNombre('estados_publicacion', prop.estado_publicacion_id) }}</td>
+                <td>{{ getCatalogoNombre('agentes', prop.agente_id) }}</td>
+                <td>{{ getCatalogoNombre('agentes_externos', prop.agente_externo_id) }}</td>
+              </tr>
+            }
+          </tbody>
         </table>
       </div>
-    } @else {
-      <p>No se encontraron propiedades.</p>
-    }
+     } @else if (!isLoading && !isNewMode && !editingProperty) { <p class="no-data-message">No se encontraron propiedades.</p> }
+
 
     @if (editingProperty) {
       <section class="form-section editing-section">
-        <h3>Editando Propiedad ID: {{ editingProperty.id }}</h3>
+        <h3>✏️ Editando Propiedad ID: {{ editingProperty.id }}</h3>
 
-        <form class="property-form" (ngSubmit)="saveChanges()">
-          <div class="form-grid">
-
-            <fieldset>
-              <legend>Datos Principales</legend>
+        <form class="property-form" #editForm="ngForm" (ngSubmit)="saveChanges()"> <details class="form-section-details" open>
+            <summary class="form-section-summary"><legend>📝 Datos Principales</legend></summary>
+            <div class="fieldset-content form-grid">
               <label>Título: <input [(ngModel)]="editingProperty.titulo" name="edit_titulo" required /></label>
-              <label>Descripción: <textarea [(ngModel)]="editingProperty.descripcion" name="edit_desc"></textarea></label>
+              <label>Descripción: <textarea [(ngModel)]="editingProperty.descripcion" name="edit_desc" rows="4"></textarea></label>
               <label>Dirección: <input [(ngModel)]="editingProperty.direccion" name="edit_dir" /></label>
               <label>Código Postal: <input [(ngModel)]="editingProperty.codigo_postal" name="edit_cp" /></label>
-            </fieldset>
+            </div>
+          </details>
 
-            <fieldset class="images-section">
-              <legend>📸 Imágenes de la Propiedad</legend>
-
+          <details class="form-section-details images-section">
+            <summary class="form-section-summary"><legend>📸 Imágenes</legend></summary>
+            <div class="fieldset-content">
               @if (editingImages && editingImages.length > 0) {
                 <div class="images-grid">
                   @for (img of editingImages; track img.id) {
@@ -102,12 +113,12 @@
                         @if (img.es_principal) {
                           <span class="badge-principal">⭐ Principal</span>
                         } @else {
-                          <button type="button" class="btn-small" (click)="setPrincipal(editingProperty.id!, img.id)">
+                          <button type="button" class="btn-small btn-set-principal" (click)="setPrincipal(editingProperty.id!, img.id)">
                             Hacer Principal
                           </button>
                         }
-                        <button type="button" class="btn-delete-img" (click)="deleteImage(editingProperty.id!, img.id)">
-                          🗑️
+                        <button type="button" class="btn-small btn-delete-img" (click)="deleteImage(editingProperty.id!, img.id)">
+                          Eliminar
                         </button>
                       </div>
                     </div>
@@ -119,23 +130,16 @@
 
               <div class="upload-section">
                 <label class="file-upload-label">
-                  <input
-                    type="file"
-                    multiple
-                    accept="image/*"
-                    (change)="onFileSelected($event)"
-                    name="edit_images"
-                  />
-                  Seleccionar nuevas imágenes
+                  <input type="file" multiple accept="image/*" (change)="onFileSelected($event)" name="edit_images" />
+                  + Agregar Nuevas Imágenes
                 </label>
-
                 @if (selectedFiles.length > 0) {
                   <div class="selected-files">
-                    <p>Archivos seleccionados ({{ selectedFiles.length }}):</p>
+                    <p>Archivos listos para subir ({{ selectedFiles.length }}):</p>
                     <ul>
                       @for (file of selectedFiles; track $index) {
                         <li>
-                          {{ file.name }}
+                          <span>{{ file.name }}</span>
                           <button type="button" class="btn-remove-file" (click)="removeSelectedFile($index)">❌</button>
                         </li>
                       }
@@ -143,13 +147,15 @@
                   </div>
                 }
               </div>
-            </fieldset>
+            </div>
+          </details>
 
-            <fieldset>
-              <legend>Valores</legend>
-              <label>Precio (Venta): <input [(ngModel)]="editingProperty.precio" name="edit_precio" type="number" /></label>
-              <label>Precio (Alquiler): <input [(ngModel)]="editingProperty.precio_alquiler" name="edit_precio_alq" type="number" /></label>
-              <label>Valor Administración: <input [(ngModel)]="editingProperty.valor_administracion" name="edit_admin" type="number" /></label>
+          <details class="form-section-details">
+            <summary class="form-section-summary"><legend>💲 Valores</legend></summary>
+            <div class="fieldset-content form-grid">
+              <label>Precio (Venta): <input [(ngModel)]="editingProperty.precio" name="edit_precio" type="number" step="any" /></label>
+              <label>Precio (Alquiler): <input [(ngModel)]="editingProperty.precio_alquiler" name="edit_precio_alq" type="number" step="any" /></label>
+              <label>Valor Administración: <input [(ngModel)]="editingProperty.valor_administracion" name="edit_admin" type="number" step="any" /></label>
               <label>Moneda:
                 <select [(ngModel)]="editingProperty.moneda_id" name="edit_moneda">
                   <option [ngValue]="null">-- Opcional --</option>
@@ -161,348 +167,315 @@
               <label>Frecuencia Alquiler:
                 <select [(ngModel)]="editingProperty.frecuencia_alquiler_id" name="edit_freq_alq">
                   <option [ngValue]="null">-- Opcional --</option>
-                  @for (item of catalogos['frecuencias_alquiler']; track item.id) {
-                    <option [value]="item.id">{{ item.nombre }}</option>
-                  }
+                  @for (item of catalogos['frecuencias_alquiler']; track item.id) { <option [value]="item.id">{{ item.nombre }}</option> }
                 </select>
               </label>
-            </fieldset>
+            </div>
+          </details>
 
-            <fieldset>
-              <legend>Dimensiones y Espacios</legend>
-              <label>Habitaciones: <input [(ngModel)]="editingProperty.habitaciones" name="edit_hab" type="number" /></label>
-              <label>Alcobas: <input [(ngModel)]="editingProperty.alcobas" name="edit_alc" type="number" /></label>
-              <label>Baños: <input [(ngModel)]="editingProperty.banos" name="edit_ban" type="number" /></label>
-              <label>Medios Baños: <input [(ngModel)]="editingProperty.banos_medios" name="edit_ban_m" type="number" /></label>
-              <label>Estacionamientos: <input [(ngModel)]="editingProperty.estacionamientos" name="edit_est" type="number" /></label>
-              <label>Año Construcción: <input [(ngModel)]="editingProperty.anio_construccion" name="edit_anio" type="number" /></label>
+          <details class="form-section-details">
+            <summary class="form-section-summary"><legend>📐 Dimensiones y Espacios</legend></summary>
+            <div class="fieldset-content form-grid">
+              <label>Habitaciones: <input [(ngModel)]="editingProperty.habitaciones" name="edit_hab" type="number" min="0" /></label>
+              <label>Alcobas: <input [(ngModel)]="editingProperty.alcobas" name="edit_alc" type="number" min="0" /></label>
+              <label>Baños: <input [(ngModel)]="editingProperty.banos" name="edit_ban" type="number" min="0" /></label>
+              <label>Medios Baños: <input [(ngModel)]="editingProperty.banos_medios" name="edit_ban_m" type="number" min="0" /></label>
+              <label>Estacionamientos: <input [(ngModel)]="editingProperty.estacionamientos" name="edit_est" type="number" min="0" /></label>
+              <label>Año Construcción: <input [(ngModel)]="editingProperty.anio_construccion" name="edit_anio" type="number" min="1800" max="2100" /></label>
               <label>Piso: <input [(ngModel)]="editingProperty.piso" name="edit_piso" /></label>
-              <label>M² Terreno: <input [(ngModel)]="editingProperty.m2_terreno" name="edit_m2t" type="number" /></label>
-              <label>M² Construcción: <input [(ngModel)]="editingProperty.m2_construccion" name="edit_m2c" type="number" /></label>
-              <label>M² Privada: <input [(ngModel)]="editingProperty.m2_privada" name="edit_m2p" type="number" /></label>
-            </fieldset>
+              <label>M² Terreno: <input [(ngModel)]="editingProperty.m2_terreno" name="edit_m2t" type="number" min="0" /></label>
+              <label>M² Construcción: <input [(ngModel)]="editingProperty.m2_construccion" name="edit_m2c" type="number" min="0" /></label>
+              <label>M² Privada: <input [(ngModel)]="editingProperty.m2_privada" name="edit_m2p" type="number" min="0" /></label>
+            </div>
+          </details>
 
-            <fieldset>
-              <legend>Clasificación</legend>
+          <details class="form-section-details">
+            <summary class="form-section-summary"><legend>🏷️ Clasificación</legend></summary>
+            <div class="fieldset-content form-grid">
               <label>Tipo de Negocio:
                 <select [(ngModel)]="editingProperty.tipo_negocio_id" name="edit_tipo_neg" required>
                   <option [ngValue]="null">-- Selecciona --</option>
-                  @for (item of catalogos['tipos_negocio']; track item.id) {
-                    <option [value]="item.id">{{ item.nombre }}</option>
-                  }
+                  @for (item of catalogos['tipos_negocio']; track item.id) { <option [value]="item.id">{{ item.nombre }}</option> }
                 </select>
               </label>
               <label>Tipo de Propiedad:
                 <select [(ngModel)]="editingProperty.tipo_propiedad_id" name="edit_tipo_prop" required>
                   <option [ngValue]="null">-- Selecciona --</option>
-                  @for (item of catalogos['tipos_propiedad']; track item.id) {
-                    <option [value]="item.id">{{ item.nombre }}</option>
-                  }
+                  @for (item of catalogos['tipos_propiedad']; track item.id) { <option [value]="item.id">{{ item.nombre }}</option> }
                 </select>
               </label>
               <label>Estado Publicación:
                 <select [(ngModel)]="editingProperty.estado_publicacion_id" name="edit_est_pub" required>
                   <option [ngValue]="null">-- Selecciona --</option>
-                  @for (item of catalogos['estados_publicacion']; track item.id) {
-                    <option [value]="item.id">{{ item.nombre }}</option>
-                  }
+                  @for (item of catalogos['estados_publicacion']; track item.id) { <option [value]="item.id">{{ item.nombre }}</option> }
                 </select>
               </label>
               <label>Estado Físico:
                 <select [(ngModel)]="editingProperty.estado_fisico_id" name="edit_est_fis">
                   <option [ngValue]="null">-- Opcional --</option>
-                  @for (item of catalogos['estados_fisicos']; track item.id) {
-                    <option [value]="item.id">{{ item.nombre }}</option>
-                  }
+                  @for (item of catalogos['estados_fisicos']; track item.id) { <option [value]="item.id">{{ item.nombre }}</option> }
                 </select>
               </label>
-            </fieldset>
+            </div>
+          </details>
 
-            <fieldset>
-              <legend>Ubicación (Catálogos)</legend>
+          <details class="form-section-details">
+            <summary class="form-section-summary"><legend>📍 Ubicación (Catálogos)</legend></summary>
+            <div class="fieldset-content form-grid">
               <label>Estado:
                 <select [(ngModel)]="editingProperty.estado_id" name="edit_estado">
                   <option [ngValue]="null">-- Opcional --</option>
-                  @for (item of catalogos['estados']; track item.id) {
-                    <option [value]="item.id">{{ item.nombre }}</option>
-                  }
+                  @for (item of catalogos['estados']; track item.id) { <option [value]="item.id">{{ item.nombre }}</option> }
                 </select>
               </label>
               <label>Ciudad:
                 <select [(ngModel)]="editingProperty.ciudad_id" name="edit_ciudad">
                   <option [ngValue]="null">-- Opcional --</option>
-                  @for (item of catalogos['ciudades']; track item.id) {
-                    <option [value]="item.id">{{ item.nombre }}</option>
-                  }
+                  @for (item of catalogos['ciudades']; track item.id) { <option [value]="item.id">{{ item.nombre }}</option> }
                 </select>
               </label>
               <label>Zona:
                 <select [(ngModel)]="editingProperty.zona_id" name="edit_zona">
                   <option [ngValue]="null">-- Opcional --</option>
-                  @for (item of catalogos['zonas']; track item.id) {
-                    <option [value]="item.id">{{ item.nombre }}</option>
-                  }
+                  @for (item of catalogos['zonas']; track item.id) { <option [value]="item.id">{{ item.nombre }}</option> }
                 </select>
               </label>
-            </fieldset>
+            </div>
+          </details>
 
-            <fieldset>
-              <legend>Ubicación (Coords. y Varios)</legend>
-                <label>Latitud: <input [(ngModel)]="editingProperty.lat" name="edit_lat" type="number" /></label>
-                <label>Longitud: <input [(ngModel)]="editingProperty.lng" name="edit_lng" type="number" /></label>
-                <label>Registro Público: <input [(ngModel)]="editingProperty.registro_publico" name="edit_reg_pub" /></label>
-            </fieldset>
+          <details class="form-section-details">
+            <summary class="form-section-summary"><legend>🗺️ Ubicación (Coords. y Varios)</legend></summary>
+            <div class="fieldset-content form-grid">
+              <label>Latitud: <input [(ngModel)]="editingProperty.lat" name="edit_lat" type="number" step="any" /></label>
+              <label>Longitud: <input [(ngModel)]="editingProperty.lng" name="edit_lng" type="number" step="any" /></label>
+              <label>Registro Público: <input [(ngModel)]="editingProperty.registro_publico" name="edit_reg_pub" /></label>
+            </div>
+          </details>
 
-            <fieldset>
-              <legend>Agentes y Validación</legend>
+          <details class="form-section-details">
+            <summary class="form-section-summary"><legend>🧑‍💼 Agentes y Validación</legend></summary>
+            <div class="fieldset-content form-grid">
               <label>Captado por (Agente):
                 <select [(ngModel)]="editingProperty.captado_por_agente_id" name="edit_cap_ag" required>
                   <option [ngValue]="null">-- Selecciona --</option>
-                  @for (item of catalogos['agentes']; track item.id) {
-                    <option [value]="item.id">{{ item.nombre }}</option>
-                  }
+                  @for (item of catalogos['agentes']; track item.id) { <option [value]="item.id">{{ item.nombre }}</option> }
                 </select>
               </label>
               <label>Agente Asignado:
                 <select [(ngModel)]="editingProperty.agente_id" name="edit_ag">
                   <option [ngValue]="null">-- Opcional --</option>
-                  @for (item of catalogos['agentes']; track item.id) {
-                    <option [value]="item.id">{{ item.nombre }}</option>
-                  }
+                  @for (item of catalogos['agentes']; track item.id) { <option [value]="item.id">{{ item.nombre }}</option> }
                 </select>
               </label>
               <label>Agente Externo:
                 <select [(ngModel)]="editingProperty.agente_externo_id" name="edit_ag_ext">
                   <option [ngValue]="null">-- Opcional --</option>
-                  @for (item of catalogos['agentes_externos']; track item.id) {
-                    <option [value]="item.id">{{ item.nombre }}</option>
-                  }
+                  @for (item of catalogos['agentes_externos']; track item.id) { <option [value]="item.id">{{ item.nombre }}</option> }
                 </select>
               </label>
-              <label>Convenio URL: <input [(ngModel)]="editingProperty.convenio_url" name="edit_conv_url" /></label>
-              <label>Convenio Validado:
+              <label>Convenio URL: <input [(ngModel)]="editingProperty.convenio_url" name="edit_conv_url" type="url" /></label>
+              <label class="checkbox-label">Convenio Validado:
                 <input type="checkbox" [(ngModel)]="editingProperty.convenio_validado" name="edit_conv_val" />
               </label>
-              <label>Validado por (Usuario):
+              <label>Validado por (Agente):
                 <select [(ngModel)]="editingProperty.validado_por_usuario_id" name="edit_val_usr">
                   <option [ngValue]="null">-- Opcional --</option>
-                  @for (item of catalogos['agentes']; track item.id) {
-                    <option [value]="item.id">{{ item.nombre }}</option>
-                  }
+                  @for (item of catalogos['agentes']; track item.id) { <option [value]="item.id">{{ item.nombre }}</option> }
                 </select>
               </label>
-            </fieldset>
+            </div>
+          </details>
 
-          </div>
-          <div class="form-actions">
-            <button type="submit" [disabled]="uploadingImages">
-              {{ uploadingImages ? '📤 Subiendo imágenes...' : '💾 Guardar Cambios' }}
+          <div class="form-actions main-actions">
+            <button type="submit" class="btn-submit" [disabled]="uploadingImages || editForm.invalid"> {{ uploadingImages ? '📤 Subiendo imágenes...' : '💾 Guardar Cambios' }}
             </button>
-            <button type="button" (click)="cancelEdit()">❌ Cancelar</button>
+            <button type="button" class="btn-cancel" (click)="cancelEdit()">❌ Cancelar</button>
           </div>
         </form>
       </section>
     }
 
-    @if (!editingProperty) {
+    @if (isNewMode) {
       <section class="form-section">
-        <h3>Agregar nueva propiedad</h3>
-        <form class="property-form" (ngSubmit)="addProperty()">
-          <div class="form-grid">
-
-            <fieldset>
-              <legend>Datos Principales</legend>
+        <h3>➕ Agregar Nueva Propiedad</h3>
+        <form class="property-form" #addForm="ngForm" (ngSubmit)="addProperty()"> <details class="form-section-details" open>
+            <summary class="form-section-summary"><legend>📝 Datos Principales</legend></summary>
+            <div class="fieldset-content form-grid">
               <label>Título: <input [(ngModel)]="newProperty.titulo" name="new_titulo" required /></label>
-              <label>Descripción: <textarea [(ngModel)]="newProperty.descripcion" name="new_desc"></textarea></label>
+              <label>Descripción: <textarea [(ngModel)]="newProperty.descripcion" name="new_desc" rows="4"></textarea></label>
               <label>Dirección: <input [(ngModel)]="newProperty.direccion" name="new_dir" /></label>
               <label>Código Postal: <input [(ngModel)]="newProperty.codigo_postal" name="new_cp" /></label>
-            </fieldset>
+            </div>
+          </details>
 
-            <fieldset class="images-section">
-              <legend>📸 Imágenes de la Propiedad</legend>
-
+          <details class="form-section-details images-section">
+            <summary class="form-section-summary"><legend>📸 Imágenes</legend></summary>
+            <div class="fieldset-content">
               <div class="upload-section">
                 <label class="file-upload-label">
-                  <input
-                    type="file"
-                    multiple
-                    accept="image/*"
-                    (change)="onFileSelected($event)"
-                    name="new_images"
-                  />
-                  Seleccionar imágenes
+                  <input type="file" multiple accept="image/*" (change)="onFileSelected($event)" name="new_images" />
+                  Seleccionar Imágenes
                 </label>
-
                 @if (selectedFiles.length > 0) {
                   <div class="selected-files">
                     <p>Archivos seleccionados ({{ selectedFiles.length }}):</p>
                     <ul>
                       @for (file of selectedFiles; track $index) {
                         <li>
-                          {{ file.name }}
-                          <button type="button" class="btn-remove-file" (click)="removeSelectedFile($index)">❌</button>
+                           <span>{{ file.name }}</span>
+                           <button type="button" class="btn-remove-file" (click)="removeSelectedFile($index)">❌</button>
                         </li>
                       }
                     </ul>
-                    <p class="info-text">La primera imagen será la imagen principal</p>
+                    <p class="info-text">La primera imagen seleccionada será la imagen principal.</p>
                   </div>
+                } @else {
+                  <p class="info-text">Selecciona una o más imágenes para la propiedad.</p>
                 }
               </div>
-            </fieldset>
+            </div>
+          </details>
 
-            <fieldset>
-              <legend>Valores</legend>
-              <label>Precio (Venta): <input [(ngModel)]="newProperty.precio" name="new_precio" type="number" /></label>
-              <label>Precio (Alquiler): <input [(ngModel)]="newProperty.precio_alquiler" name="new_precio_alq" type="number" /></label>
-              <label>Valor Administración: <input [(ngModel)]="newProperty.valor_administracion" name="new_admin" type="number" /></label>
+          <details class="form-section-details">
+            <summary class="form-section-summary"><legend>💲 Valores</legend></summary>
+            <div class="fieldset-content form-grid">
+              <label>Precio (Venta): <input [(ngModel)]="newProperty.precio" name="new_precio" type="number" step="any" /></label>
+              <label>Precio (Alquiler): <input [(ngModel)]="newProperty.precio_alquiler" name="new_precio_alq" type="number" step="any" /></label>
+              <label>Valor Administración: <input [(ngModel)]="newProperty.valor_administracion" name="new_admin" type="number" step="any" /></label>
               <label>Moneda:
                 <select [(ngModel)]="newProperty.moneda_id" name="new_moneda">
                   <option [ngValue]="null">-- Opcional --</option>
                   @for (item of catalogos['monedas']; track item.id) {
                     <option [value]="item.id">{{ item.nombre }}</option>
-                  }
+                   }
                 </select>
               </label>
               <label>Frecuencia Alquiler:
                 <select [(ngModel)]="newProperty.frecuencia_alquiler_id" name="new_freq_alq">
                   <option [ngValue]="null">-- Opcional --</option>
-                  @for (item of catalogos['frecuencias_alquiler']; track item.id) {
-                    <option [value]="item.id">{{ item.nombre }}</option>
-                  }
+                  @for (item of catalogos['frecuencias_alquiler']; track item.id) { <option [value]="item.id">{{ item.nombre }}</option> }
                 </select>
               </label>
-            </fieldset>
+            </div>
+          </details>
 
-            <fieldset>
-              <legend>Dimensiones y Espacios</legend>
-              <label>Habitaciones: <input [(ngModel)]="newProperty.habitaciones" name="new_hab" type="number" /></label>
-              <label>Alcobas: <input [(ngModel)]="newProperty.alcobas" name="new_alc" type="number" /></label>
-              <label>Baños: <input [(ngModel)]="newProperty.banos" name="new_ban" type="number" /></label>
-              <label>Medios Baños: <input [(ngModel)]="newProperty.banos_medios" name="new_ban_m" type="number" /></label>
-              <label>Estacionamientos: <input [(ngModel)]="newProperty.estacionamientos" name="new_est" type="number" /></label>
-              <label>Año Construcción: <input [(ngModel)]="newProperty.anio_construccion" name="new_anio" type="number" /></label>
+           <details class="form-section-details">
+            <summary class="form-section-summary"><legend>📐 Dimensiones y Espacios</legend></summary>
+            <div class="fieldset-content form-grid">
+              <label>Habitaciones: <input [(ngModel)]="newProperty.habitaciones" name="new_hab" type="number" min="0" value="0" /></label>
+              <label>Alcobas: <input [(ngModel)]="newProperty.alcobas" name="new_alc" type="number" min="0" value="0" /></label>
+              <label>Baños: <input [(ngModel)]="newProperty.banos" name="new_ban" type="number" min="0" value="0" /></label>
+              <label>Medios Baños: <input [(ngModel)]="newProperty.banos_medios" name="new_ban_m" type="number" min="0" value="0" /></label>
+              <label>Estacionamientos: <input [(ngModel)]="newProperty.estacionamientos" name="new_est" type="number" min="0" value="0" /></label>
+              <label>Año Construcción: <input [(ngModel)]="newProperty.anio_construccion" name="new_anio" type="number" min="1800" max="2100" /></label>
               <label>Piso: <input [(ngModel)]="newProperty.piso" name="new_piso" /></label>
-              <label>M² Terreno: <input [(ngModel)]="newProperty.m2_terreno" name="new_m2t" type="number" /></label>
-              <label>M² Construcción: <input [(ngModel)]="newProperty.m2_construccion" name="new_m2c" type="number" /></label>
-              <label>M² Privada: <input [(ngModel)]="newProperty.m2_privada" name="new_m2p" type="number" /></label>
-            </fieldset>
+              <label>M² Terreno: <input [(ngModel)]="newProperty.m2_terreno" name="new_m2t" type="number" min="0" value="0" /></label>
+              <label>M² Construcción: <input [(ngModel)]="newProperty.m2_construccion" name="new_m2c" type="number" min="0" value="0" /></label>
+              <label>M² Privada: <input [(ngModel)]="newProperty.m2_privada" name="new_m2p" type="number" min="0" value="0" /></label>
+            </div>
+          </details>
 
-            <fieldset>
-              <legend>Clasificación</legend>
+          <details class="form-section-details">
+            <summary class="form-section-summary"><legend>🏷️ Clasificación</legend></summary>
+            <div class="fieldset-content form-grid">
               <label>Tipo de Negocio:
                 <select [(ngModel)]="newProperty.tipo_negocio_id" name="new_tipo_neg" required>
                   <option [ngValue]="null">-- Selecciona --</option>
-                  @for (item of catalogos['tipos_negocio']; track item.id) {
-                    <option [value]="item.id">{{ item.nombre }}</option>
-                  }
+                  @for (item of catalogos['tipos_negocio']; track item.id) { <option [value]="item.id">{{ item.nombre }}</option> }
                 </select>
               </label>
               <label>Tipo de Propiedad:
                 <select [(ngModel)]="newProperty.tipo_propiedad_id" name="new_tipo_prop" required>
                   <option [ngValue]="null">-- Selecciona --</option>
-                  @for (item of catalogos['tipos_propiedad']; track item.id) {
-                    <option [value]="item.id">{{ item.nombre }}</option>
-                  }
+                  @for (item of catalogos['tipos_propiedad']; track item.id) { <option [value]="item.id">{{ item.nombre }}</option> }
                 </select>
               </label>
               <label>Estado Publicación:
                 <select [(ngModel)]="newProperty.estado_publicacion_id" name="new_est_pub" required>
                   <option [ngValue]="null">-- Selecciona --</option>
-                  @for (item of catalogos['estados_publicacion']; track item.id) {
-                    <option [value]="item.id">{{ item.nombre }}</option>
-                  }
+                  @for (item of catalogos['estados_publicacion']; track item.id) { <option [value]="item.id">{{ item.nombre }}</option> }
                 </select>
               </label>
               <label>Estado Físico:
                 <select [(ngModel)]="newProperty.estado_fisico_id" name="new_est_fis">
                   <option [ngValue]="null">-- Opcional --</option>
-                  @for (item of catalogos['estados_fisicos']; track item.id) {
-                    <option [value]="item.id">{{ item.nombre }}</option>
-                  }
+                  @for (item of catalogos['estados_fisicos']; track item.id) { <option [value]="item.id">{{ item.nombre }}</option> }
                 </select>
               </label>
-            </fieldset>
+            </div>
+          </details>
 
-            <fieldset>
-              <legend>Ubicación (Catálogos)</legend>
-              <label>Estado:
+          <details class="form-section-details">
+            <summary class="form-section-summary"><legend>📍 Ubicación (Catálogos)</legend></summary>
+            <div class="fieldset-content form-grid">
+               <label>Estado:
                 <select [(ngModel)]="newProperty.estado_id" name="new_estado">
                   <option [ngValue]="null">-- Opcional --</option>
-                  @for (item of catalogos['estados']; track item.id) {
-                    <option [value]="item.id">{{ item.nombre }}</option>
-                  }
+                  @for (item of catalogos['estados']; track item.id) { <option [value]="item.id">{{ item.nombre }}</option> }
                 </select>
               </label>
               <label>Ciudad:
                 <select [(ngModel)]="newProperty.ciudad_id" name="new_ciudad">
                   <option [ngValue]="null">-- Opcional --</option>
-                  @for (item of catalogos['ciudades']; track item.id) {
-                    <option [value]="item.id">{{ item.nombre }}</option>
-                  }
+                  @for (item of catalogos['ciudades']; track item.id) { <option [value]="item.id">{{ item.nombre }}</option> }
                 </select>
               </label>
               <label>Zona:
                 <select [(ngModel)]="newProperty.zona_id" name="new_zona">
                   <option [ngValue]="null">-- Opcional --</option>
-                  @for (item of catalogos['zonas']; track item.id) {
-                    <option [value]="item.id">{{ item.nombre }}</option>
-                  }
+                  @for (item of catalogos['zonas']; track item.id) { <option [value]="item.id">{{ item.nombre }}</option> }
                 </select>
               </label>
-            </fieldset>
+            </div>
+          </details>
 
-            <fieldset>
-              <legend>Ubicación (Coords. y Varios)</legend>
-                <label>Latitud: <input [(ngModel)]="newProperty.lat" name="new_lat" type="number" /></label>
-                <label>Longitud: <input [(ngModel)]="newProperty.lng" name="new_lng" type="number" /></label>
-                <label>Registro Público: <input [(ngModel)]="newProperty.registro_publico" name="new_reg_pub" /></label>
-            </fieldset>
+          <details class="form-section-details">
+            <summary class="form-section-summary"><legend>🗺️ Ubicación (Coords. y Varios)</legend></summary>
+            <div class="fieldset-content form-grid">
+              <label>Latitud: <input [(ngModel)]="newProperty.lat" name="new_lat" type="number" step="any" /></label>
+              <label>Longitud: <input [(ngModel)]="newProperty.lng" name="new_lng" type="number" step="any" /></label>
+              <label>Registro Público: <input [(ngModel)]="newProperty.registro_publico" name="new_reg_pub" /></label>
+            </div>
+          </details>
 
-            <fieldset>
-              <legend>Agentes y Validación</legend>
-              <label>Captado por (Agente):
+          <details class="form-section-details">
+            <summary class="form-section-summary"><legend>🧑‍💼 Agentes y Validación</legend></summary>
+            <div class="fieldset-content form-grid">
+               <label>Captado por (Agente):
                 <select [(ngModel)]="newProperty.captado_por_agente_id" name="new_cap_ag" required>
                   <option [ngValue]="null">-- Selecciona --</option>
-                  @for (item of catalogos['agentes']; track item.id) {
-                    <option [value]="item.id">{{ item.nombre }}</option>
-                  }
+                  @for (item of catalogos['agentes']; track item.id) { <option [value]="item.id">{{ item.nombre }}</option> }
                 </select>
               </label>
               <label>Agente Asignado:
                 <select [(ngModel)]="newProperty.agente_id" name="new_ag">
                   <option [ngValue]="null">-- Opcional --</option>
-                  @for (item of catalogos['agentes']; track item.id) {
-                    <option [value]="item.id">{{ item.nombre }}</option>
-                  }
+                  @for (item of catalogos['agentes']; track item.id) { <option [value]="item.id">{{ item.nombre }}</option> }
                 </select>
               </label>
               <label>Agente Externo:
                 <select [(ngModel)]="newProperty.agente_externo_id" name="new_ag_ext">
                   <option [ngValue]="null">-- Opcional --</option>
-                  @for (item of catalogos['agentes_externos']; track item.id) {
-                    <option [value]="item.id">{{ item.nombre }}</option>
-                  }
+                  @for (item of catalogos['agentes_externos']; track item.id) { <option [value]="item.id">{{ item.nombre }}</option> }
                 </select>
               </label>
-              <label>Convenio URL: <input [(ngModel)]="newProperty.convenio_url" name="new_conv_url" /></label>
-              <label>Convenio Validado:
+              <label>Convenio URL: <input [(ngModel)]="newProperty.convenio_url" name="new_conv_url" type="url" /></label>
+              <label class="checkbox-label">Convenio Validado:
                 <input type="checkbox" [(ngModel)]="newProperty.convenio_validado" name="new_conv_val" />
               </label>
-              <label>Validado por (Usuario):
+               <label>Validado por (Agente):
                 <select [(ngModel)]="newProperty.validado_por_usuario_id" name="new_val_usr">
                   <option [ngValue]="null">-- Opcional --</option>
-                  @for (item of catalogos['agentes']; track item.id) {
-                    <option [value]="item.id">{{ item.nombre }}</option>
-                  }
+                  @for (item of catalogos['agentes']; track item.id) { <option [value]="item.id">{{ item.nombre }}</option> }
                 </select>
               </label>
-            </fieldset>
+            </div>
+          </details>
 
-          </div>
-          <div class="form-actions">
-            <button type="submit" [disabled]="uploadingImages">
-              {{ uploadingImages ? '📤 Subiendo imágenes...' : '➕ Agregar propiedad' }}
+          <div class="form-actions main-actions">
+            <button type="submit" class="btn-submit" [disabled]="uploadingImages || addForm.invalid"> {{ uploadingImages ? '📤 Subiendo imágenes...' : '➕ Agregar Propiedad' }}
             </button>
+             <button type="button" class="btn-cancel" (click)="cancelEdit()">❌ Cancelar</button>
           </div>
         </form>
       </section>

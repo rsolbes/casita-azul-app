@@ -11,7 +11,7 @@ export interface PropertyImage {
   orden: number;
 }
 
-// Interfaz de Propiedad COMPLETA (ahora con imágenes)
+// Interfaz de Propiedad COMPLETA
 export interface Property {
   id?: number;
   titulo: string;
@@ -36,7 +36,7 @@ export interface Property {
   visitas?: number | null;
   registro_publico?: string | null;
   convenio_url?: string | null;
-  convenio_validado?: boolean | null;
+  convenio_validado?: boolean | null; // Cambiado a boolean (no null)
   fecha_validacion?: string | null;
   created_at?: string | null;
   updated_at?: string | null;
@@ -54,7 +54,7 @@ export interface Property {
   agente_id?: number | null;
   agente_externo_id?: number | null;
   validado_por_usuario_id?: number | null;
-  imagenes?: PropertyImage[] | null; // Nueva propiedad para las imágenes
+  imagenes?: PropertyImage[] | null;
 }
 
 // Interfaz para la respuesta de la API de propiedades
@@ -62,16 +62,51 @@ export interface PropertiesApiResponse {
   properties: Property[];
 }
 
-// Interfaz para la respuesta de la API de catálogos
-export interface CatalogosApiResponse {
-  [key: string]: { id: number; nombre: string }[];
+// --- Interfaces Corregidas para Catálogos ---
+// Interfaz base para ítems de catálogo
+interface CatalogoItem {
+  id: number;
+  nombre: string;
 }
+
+// Interfaz específica para Agente (si devuelve más campos)
+interface AgenteItem extends CatalogoItem {
+  email?: string;
+  telefono?: string | null;
+}
+
+// Interfaz específica para Moneda (solo id y nombre por ahora)
+interface MonedaItem extends CatalogoItem {
+  // codigo?: string; // Comentado - No devuelto por el backend actual
+  // simbolo?: string; // Comentado - No devuelto por el backend actual
+}
+
+
+// Interfaz para la respuesta COMPLETA de la API de catálogos
+export interface CatalogosApiResponse {
+  agentes?: AgenteItem[]; // Usa la interfaz específica si aplica
+  agentes_externos?: CatalogoItem[];
+  ciudades?: CatalogoItem[];
+  estados?: CatalogoItem[];
+  estados_fisicos?: CatalogoItem[];
+  estados_publicacion?: CatalogoItem[];
+  frecuencias_alquiler?: CatalogoItem[];
+  monedas?: MonedaItem[]; // Usa la interfaz MonedaItem corregida
+  tipos_negocio?: CatalogoItem[];
+  tipos_propiedad?: CatalogoItem[];
+  zonas?: CatalogoItem[];
+  // Firma de índice para permitir acceso genérico sin error TS
+  [key: string]: CatalogoItem[] | AgenteItem[] | MonedaItem[] | undefined;
+}
+// --- Fin Interfaces Corregidas ---
+
 
 @Injectable({
   providedIn: 'root'
 })
 export class PropertyService {
-  private apiUrl = 'http://127.0.0.1:5000/api';
+  // Asegúrate que esta URL apunte a tu backend Flask
+  private apiUrl = 'http://127.0.0.1:5000/api'; // O http://localhost:5000/api
 
   constructor(private http: HttpClient) {}
 
@@ -84,11 +119,13 @@ export class PropertyService {
     return this.http.get<Property>(`${this.apiUrl}/propiedades/${id}`);
   }
 
-  add(property: Property): Observable<any> {
-    return this.http.post(`${this.apiUrl}/propiedades`, property);
+  // Devuelve Observable<any> o una interfaz más específica si tu backend la define
+  add(property: Property): Observable<{ id: number; status: string }> {
+    return this.http.post<{ id: number; status: string }>(`${this.apiUrl}/propiedades`, property);
   }
 
   update(property: Property): Observable<any> {
+    // Asegúrate de enviar el ID correcto en la URL
     return this.http.put(`${this.apiUrl}/propiedades/${property.id}`, property);
   }
 
@@ -115,6 +152,7 @@ export class PropertyService {
   }
 
   setPrincipalImage(propiedadId: number, imagenId: number): Observable<any> {
+    // El backend espera un cuerpo vacío ({}), así que lo enviamos
     return this.http.put(`${this.apiUrl}/propiedades/${propiedadId}/imagenes/${imagenId}/principal`, {});
   }
 }

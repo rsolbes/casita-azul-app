@@ -1,18 +1,22 @@
 <div class="login-container">
   <div class="login-card">
     <div class="logo-section">
-      <h1>{{ isLoginMode ? 'Iniciar Sesión' : 'Registro' }}</h1>
-      <p>{{ isLoginMode ? 'Bienvenido de nuevo' : 'Crea tu cuenta' }}</p>
+      <h1>Iniciar Sesión</h1>
+      <p>Bienvenido de nuevo</p>
     </div>
 
-    <div *ngIf="successMessage" class="alert alert-success">
-      {{ successMessage }}
-    </div>
-    <div *ngIf="errorMessage" class="alert alert-error">
-      {{ errorMessage }}
-    </div>
+    @if (successMessage) {
+      <div class="alert alert-success">
+        {{ successMessage }}
+      </div>
+    }
+    @if (errorMessage) {
+      <div class="alert alert-error">
+        {{ errorMessage }}
+      </div>
+    }
 
-    <form *ngIf="isLoginMode" [formGroup]="loginForm" (ngSubmit)="onLogin()">
+    <form [formGroup]="loginForm" (ngSubmit)="onLogin()">
       <div class="form-group">
         <label for="login-email">Email</label>
         <input
@@ -22,9 +26,9 @@
           placeholder="tu@email.com"
           [class.invalid]="loginForm.get('email')?.invalid && loginForm.get('email')?.touched"
         />
-        <span class="error-text" *ngIf="loginForm.get('email')?.invalid && loginForm.get('email')?.touched">
-          Email inválido
-        </span>
+        @if (loginForm.get('email')?.invalid && loginForm.get('email')?.touched) {
+          <span class="error-text">Email inválido</span>
+        }
       </div>
 
       <div class="form-group">
@@ -36,9 +40,9 @@
           placeholder="••••••••"
           [class.invalid]="loginForm.get('password')?.invalid && loginForm.get('password')?.touched"
         />
-        <span class="error-text" *ngIf="loginForm.get('password')?.invalid && loginForm.get('password')?.touched">
-          Mínimo 6 caracteres
-        </span>
+         @if (loginForm.get('password')?.invalid && loginForm.get('password')?.touched) {
+          <span class="error-text">Mínimo 6 caracteres</span>
+        }
       </div>
 
       <button
@@ -50,62 +54,5 @@
       </button>
     </form>
 
-    <form *ngIf="!isLoginMode" [formGroup]="registerForm" (ngSubmit)="onRegister()">
-      <div class="form-group">
-        <label for="register-email">Email</label>
-        <input
-          type="email"
-          id="register-email"
-          formControlName="email"
-          placeholder="tu@email.com"
-          [class.invalid]="registerForm.get('email')?.invalid && registerForm.get('email')?.touched"
-        />
-        <span class="error-text" *ngIf="registerForm.get('email')?.invalid && registerForm.get('email')?.touched">
-          Email inválido
-        </span>
-      </div>
-
-      <div class="form-group">
-        <label for="register-password">Contraseña</label>
-        <input
-          type="password"
-          id="register-password"
-          formControlName="password"
-          placeholder="••••••••"
-          [class.invalid]="registerForm.get('password')?.invalid && registerForm.get('password')?.touched"
-        />
-        <span class="error-text" *ngIf="registerForm.get('password')?.invalid && registerForm.get('password')?.touched">
-          Mínimo 6 caracteres
-        </span>
-      </div>
-
-      <div class="form-group">
-        <label for="confirm-password">Confirmar Contraseña</label>
-        <input
-          type="password"
-          id="confirm-password"
-          formControlName="confirmPassword"
-          placeholder="••••••••"
-          [class.invalid]="registerForm.get('confirmPassword')?.invalid && registerForm.get('confirmPassword')?.touched"
-        />
-      </div>
-
-      <button
-        type="submit"
-        class="btn-primary"
-        [disabled]="loading || registerForm.invalid"
-      >
-        {{ loading ? 'Cargando...' : 'Registrarse' }}
-      </button>
-    </form>
-
-    <div class="toggle-mode">
-      <p>
-        {{ isLoginMode ? '¿No tienes cuenta?' : '¿Ya tienes cuenta?' }}
-        <a (click)="toggleMode()">
-          {{ isLoginMode ? 'Regístrate' : 'Inicia Sesión' }}
-        </a>
-      </p>
     </div>
-  </div>
 </div>

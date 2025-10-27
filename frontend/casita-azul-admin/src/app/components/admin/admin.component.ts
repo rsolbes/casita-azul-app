@@ -18,6 +18,7 @@ export class AdminComponent implements OnInit {
   title = 'Administración de Propiedades'; // Title adjusted
   isLoading = false;
   errorMessage = '';
+  successMessage = '';
   properties: Property[] = [];
   editingProperty: Property | null = null;
   isNewMode = false; // Flag for new property
@@ -139,6 +140,8 @@ export class AdminComponent implements OnInit {
     this.editingImages = prop.imagenes ? [...prop.imagenes] : [];
     this.selectedFiles = [];
     this.isNewMode = false; // Estamos editando
+    this.errorMessage = ''; // Limpia error
+    this.successMessage = ''; // Limpia éxito
   }
 
   // Lógica para el formulario de agregar (separada)
@@ -148,6 +151,8 @@ export class AdminComponent implements OnInit {
     this.selectedFiles = [];
     this.editingImages = [];
     this.isNewMode = true; // Estamos agregando
+    this.errorMessage = ''; // Limpia error
+    this.successMessage = ''; // Limpia éxito
     // Mostramos el formulario de agregar
     // En tu HTML actual, el formulario de agregar se muestra con !editingProperty
     // Si quieres un botón explícito, necesitarías otra variable
@@ -156,11 +161,15 @@ export class AdminComponent implements OnInit {
 
   saveChanges() {
     if (!this.editingProperty) return;
-
     this.normalizeNullValues(this.editingProperty);
+    // Limpia mensajes antes de la operación
+    this.errorMessage = '';
+    this.successMessage = '';
 
     this.propertyService.update(this.editingProperty).subscribe({
       next: () => {
+        // Muestra mensaje de éxito
+        this.successMessage = `Propiedad ID ${this.editingProperty?.id} actualizada correctamente.`;
         if (this.selectedFiles.length > 0 && this.editingProperty?.id) {
           this.uploadSelectedImages(this.editingProperty.id, () => {
             this.loadData();
@@ -184,6 +193,8 @@ export class AdminComponent implements OnInit {
     this.editingImages = [];
     this.isNewMode = false;
     this.newProperty = this.createEmptyProperty(); // Limpia el formulario de nuevo
+    this.errorMessage = ''; // Limpia error
+    this.successMessage = ''; // Limpia éxito
   }
 
   deleteProperty(id: number | undefined) {
@@ -200,18 +211,23 @@ export class AdminComponent implements OnInit {
 
   addProperty() {
     this.normalizeNullValues(this.newProperty);
+     // Limpia mensajes antes de la operación
+    this.errorMessage = '';
+    this.successMessage = '';
 
     this.propertyService.add(this.newProperty).subscribe({
       next: (response) => {
         const newId = response.id;
+        // Muestra mensaje de éxito
+        this.successMessage = `Propiedad "${this.newProperty.titulo}" agregada correctamente con ID ${newId}.`;
         if (this.selectedFiles.length > 0 && newId) {
            this.uploadSelectedImages(newId, () => {
              this.loadData();
-             this.cancelEdit(); // Reutilizamos cancelEdit para limpiar
+             this.cancelEdit();
            });
         } else {
            this.loadData();
-           this.cancelEdit(); // Reutilizamos cancelEdit para limpiar
+           this.cancelEdit();
         }
       },
       error: (err) => {
