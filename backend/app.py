@@ -762,7 +762,7 @@ def admin_create_user():
                 conn.close()
         # --- End Role Setting ---
 
-        return jsonify(new_user.dict()), 201 # Return user data as dict
+        return jsonify(new_user.model_dump()), 201 # Usa model_dump() en lugar de dict()
     except Exception as e:
         print(f"Error creating user: {e}")
         # Check for specific Supabase errors if possible (e.g., duplicate email)
