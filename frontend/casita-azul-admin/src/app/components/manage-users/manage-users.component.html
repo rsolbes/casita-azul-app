@@ -1,0 +1,115 @@
+<main class="container">
+  <header class="admin-header">
+    <h1>👥 Gestión de Usuarios</h1>
+    <div class="user-info">
+      <a routerLink="/admin" class="btn-admin-link">🏠 Ir a Propiedades</a>
+      <a routerLink="/admin/agents" class="btn-admin-link">🧑‍💼 Gestionar Agentes</a>
+      </div>
+  </header>
+
+  @if (isLoading) {
+    <p class="loading-message">Cargando usuarios...</p>
+  }
+
+  @if (errorMessage) {
+    <div class="alert alert-error">
+      <p>❌ {{ errorMessage }}</p>
+      <button (click)="loadUsers()">Reintentar</button>
+    </div>
+  }
+
+  @if (successMessage) {
+    <div class="alert alert-success">
+      <p>✅ {{ successMessage }}</p>
+    </div>
+  }
+
+  @if (!isLoading && !errorMessage) {
+    <div class="actions-bar">
+        <button class="btn-primary" (click)="toggleAddForm()">
+          {{ showAddForm ? '➖ Ocultar Formulario' : '➕ Agregar Usuario' }}
+        </button>
+    </div>
+
+    @if (showAddForm) {
+      <section class="form-section add-user-form">
+        <h3>Agregar Nuevo Usuario</h3>
+        <form [formGroup]="addUserForm" (ngSubmit)="onSubmitNewUser()">
+          <div class="form-group">
+            <label for="new-email">Email:</label>
+            <input id="new-email" type="email" formControlName="email" required>
+            @if (addUserForm.get('email')?.invalid && addUserForm.get('email')?.touched) {
+              <span class="error-text">Email inválido.</span>
+            }
+          </div>
+          <div class="form-group">
+            <label for="new-password">Contraseña:</label>
+            <input id="new-password" type="password" formControlName="password" required minlength="6">
+             @if (addUserForm.get('password')?.invalid && addUserForm.get('password')?.touched) {
+              <span class="error-text">Mínimo 6 caracteres.</span>
+            }
+          </div>
+          <div class="form-group">
+            <label for="new-role">Rol:</label>
+            <select id="new-role" formControlName="role" required>
+              @for (role of availableRoles; track role) {
+                <option [value]="role">{{ role | titlecase }}</option>
+              }
+            </select>
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn-submit" [disabled]="addUserForm.invalid || isLoading">
+              {{ isLoading ? 'Creando...' : '💾 Crear Usuario' }}
+            </button>
+            <button type="button" class="btn-cancel" (click)="toggleAddForm()">Cancelar</button>
+          </div>
+        </form>
+      </section>
+    }
+
+    @if (users.length > 0) {
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Email</th>
+              <th>Rol</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (user of users; track user.id) {
+              <tr>
+                <td>{{ user.id }}</td>
+                <td>{{ user.email }}</td>
+                <td>
+                  @if (editingUserId === user.id) {
+                    <select [(ngModel)]="editingUserRole" name="edit_role_{{user.id}}">
+                      @for (role of availableRoles; track role) {
+                        <option [value]="role">{{ role | titlecase }}</option>
+                      }
+                    </select>
+                  } @else {
+                    <span class="role-badge role-{{user.role}}">{{ user.role | titlecase }}</span>
+                  }
+                </td>
+                <td class="actions-cell">
+                  @if (editingUserId === user.id) {
+                    <button class="btn-save" (click)="saveUserRole(user.id)" [disabled]="isLoading">💾 Guardar</button>
+                    <button class="btn-cancel" (click)="cancelEditRole()">❌ Cancelar</button>
+                  } @else {
+                    <button class="btn-edit" (click)="startEditRole(user)">✏️ Editar Rol</button>
+                    <button class="btn-delete" (click)="deleteUser(user.id, user.email)">🗑️ Eliminar</button>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    } @else if (!isLoading) {
+      <p class="no-data-message">No se encontraron usuarios.</p>
+    }
+
+  } </main>

@@ -15,6 +15,25 @@
   font-size: 28px;
 }
 
+.btn-admin-link {
+  padding: 8px 15px;
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 13px;
+  text-decoration: none;
+  transition: all 0.2s;
+  margin-left: 10px; /* Add some spacing */
+}
+
+.btn-admin-link:hover {
+  background: rgba(255, 255, 255, 0.3);
+  border-color: white;
+}
+
 .user-info {
   display: flex;
   align-items: center;

@@ -1,0 +1,100 @@
+<main class="container">
+  <header class="admin-header">
+    <h1>🧑‍💼 Gestión de Agentes</h1>
+    <div class="user-info">
+      <a routerLink="/admin" class="btn-admin-link">🏠 Ir a Propiedades</a>
+      <a routerLink="/admin/users" class="btn-admin-link">👥 Gestionar Usuarios</a>
+    </div>
+  </header>
+
+  @if (isLoading) {
+    <p class="loading-message">Cargando agentes...</p>
+  }
+
+  @if (errorMessage) {
+    <div class="alert alert-error">
+      <p>❌ {{ errorMessage }}</p>
+      <button (click)="loadAgents()">Reintentar</button>
+    </div>
+  }
+
+  @if (successMessage) {
+    <div class="alert alert-success">
+      <p>✅ {{ successMessage }}</p>
+    </div>
+  }
+
+  @if (!isLoading && !errorMessage) {
+    <div class="actions-bar">
+      @if (!showAddEditForm) {
+        <button class="btn-primary" (click)="openAddForm()">
+          ➕ Agregar Agente
+        </button>
+      }
+    </div>
+
+    @if (showAddEditForm) {
+      <section class="form-section add-edit-agent-form">
+        <h3>{{ isEditMode ? 'Editar Agente' : 'Agregar Nuevo Agente' }}</h3>
+        <form [formGroup]="agentForm" (ngSubmit)="onSubmitAgent()">
+          <div class="form-group">
+            <label for="agent-nombre">Nombre:</label>
+            <input id="agent-nombre" type="text" formControlName="nombre" required>
+            @if (agentForm.get('nombre')?.invalid && agentForm.get('nombre')?.touched) {
+              <span class="error-text">Nombre es requerido.</span>
+            }
+          </div>
+          <div class="form-group">
+            <label for="agent-email">Email:</label>
+            <input id="agent-email" type="email" formControlName="email" required>
+            @if (agentForm.get('email')?.invalid && agentForm.get('email')?.touched) {
+              <span class="error-text">Email inválido.</span>
+            }
+          </div>
+          <div class="form-group">
+            <label for="agent-telefono">Teléfono (Opcional):</label>
+            <input id="agent-telefono" type="tel" formControlName="telefono">
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn-submit" [disabled]="agentForm.invalid || isLoading">
+              {{ isLoading ? (isEditMode ? 'Actualizando...' : 'Creando...') : (isEditMode ? '💾 Actualizar Agente' : '💾 Crear Agente') }}
+            </button>
+            <button type="button" class="btn-cancel" (click)="cancelForm()">Cancelar</button>
+          </div>
+        </form>
+      </section>
+    }
+
+    @if (agents.length > 0 && !showAddEditForm) {
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Nombre</th>
+              <th>Email</th>
+              <th>Teléfono</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (agent of agents; track agent.id) {
+              <tr>
+                <td>{{ agent.id }}</td>
+                <td>{{ agent.nombre }}</td>
+                <td>{{ agent.email }}</td>
+                <td>{{ agent.telefono || 'N/A' }}</td>
+                <td class="actions-cell">
+                  <button class="btn-edit" (click)="openEditForm(agent)">✏️ Editar</button>
+                  <button class="btn-delete" (click)="deleteAgent(agent.id, agent.nombre)">🗑️ Eliminar</button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    } @else if (!isLoading && !showAddEditForm) {
+      <p class="no-data-message">No se encontraron agentes.</p>
+    }
+  } </main>
