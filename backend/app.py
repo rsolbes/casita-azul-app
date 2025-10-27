@@ -11,7 +11,15 @@ from dotenv import load_dotenv
 load_dotenv()
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={r"/api/*": {"origins": "*"}})
+
+@app.after_request
+def after_request(response):
+    response.headers.add('Access-Control-Allow-Origin', 'http://localhost:4200')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+    response.headers.add('Access-Control-Allow-Credentials', 'true')
+    return response
 
 # Configuración de Supabase Storage
 SUPABASE_URL = "https://izozjytmktbuhpttczid.supabase.co"
@@ -34,6 +42,115 @@ def get_db_connection():
         sslmode='require'
     )
     return conn
+
+@app.route('/api/register', methods=['POST', 'OPTIONS'])
+def register():
+    if request.method == 'OPTIONS':
+        return '', 204
+    
+    try:
+        data = request.get_json()
+        email = data.get('email')
+        password = data.get('password')
+        
+        # Use Supabase Auth for registration
+        response = supabase.auth.sign_up({
+            "email": email,
+            "password": password
+        })
+        
+        return jsonify({
+            "status": "success",
+            "message": "Usuario registrado. Revisa tu email para confirmar."
+        }), 201
+        
+    except Exception as e:
+        print(f"Error en registro: {e}")
+        return jsonify({"error": str(e)}), 400
+
+@app.route('/api/login', methods=['POST', 'OPTIONS'])
+def login():
+    if request.method == 'OPTIONS':
+        return '', 204
+    
+    try:
+        data = request.get_json()
+        email = data.get('email')
+        password = data.get('password')
+        
+        # Use Supabase Auth for login
+        response = supabase.auth.sign_in_with_password({
+            "email": email,
+            "password": password
+        })
+        
+        return jsonify({
+            "access_token": response.session.access_token,
+            "refresh_token": response.session.refresh_token,
+            "user": {
+                "id": response.user.id,
+                "email": response.user.email
+            }
+        }), 200
+        
+    except Exception as e:
+        print(f"Error en login: {e}")
+        return jsonify({"error": "Credenciales inválidas"}), 401
+
+@app.route('/api/logout', methods=['POST', 'OPTIONS'])
+def logout():
+    if request.method == 'OPTIONS':
+        return '', 204
+    
+    try:
+        supabase.auth.sign_out()
+        return jsonify({"status": "success"}), 200
+    except Exception as e:
+        print(f"Error en logout: {e}")
+        return jsonify({"error": str(e)}), 400
+
+@app.route('/api/user', methods=['GET', 'OPTIONS'])
+def get_user():
+    if request.method == 'OPTIONS':
+        return '', 204
+    
+    try:
+        # Get token from Authorization header
+        auth_header = request.headers.get('Authorization')
+        if not auth_header or not auth_header.startswith('Bearer '):
+            return jsonify({"error": "No token provided"}), 401
+        
+        token = auth_header.split(' ')[1]
+        user = supabase.auth.get_user(token)
+        
+        return jsonify({
+            "id": user.user.id,
+            "email": user.user.email
+        }), 200
+        
+    except Exception as e:
+        print(f"Error obteniendo usuario: {e}")
+        return jsonify({"error": "Token inválido"}), 401
+
+@app.route('/api/refresh', methods=['POST', 'OPTIONS'])
+def refresh():
+    if request.method == 'OPTIONS':
+        return '', 204
+    
+    try:
+        data = request.get_json()
+        refresh_token = data.get('refresh_token')
+        
+        response = supabase.auth.refresh_session(refresh_token)
+        
+        return jsonify({
+            "access_token": response.session.access_token,
+            "refresh_token": response.session.refresh_token
+        }), 200
+        
+    except Exception as e:
+        print(f"Error en refresh: {e}")
+        return jsonify({"error": str(e)}), 401
 
 # --- Endpoint de Catálogos ---
 @app.route('/api/catalogos', methods=['GET'])

@@ -1,7 +1,13 @@
 <main class="container">
-  <header>
-    <h1>🏡 {{ title }}</h1>
-  </header>
+  <header class="admin-header">
+  <h1>🏡 {{ title }}</h1>
+  <div class="user-info">
+    @if (currentUser) {
+      <span>👤 {{ currentUser.email }}</span>
+    }
+    <button class="btn-logout" (click)="logout()">🚪 Cerrar Sesión</button>
+  </div>
+</header>
 
   @if (isLoading) {
     <p>Cargando datos...</p>
