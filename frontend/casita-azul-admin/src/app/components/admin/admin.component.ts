@@ -20,6 +20,7 @@ export class AdminComponent implements OnInit {
   errorMessage = '';
   properties: Property[] = [];
   editingProperty: Property | null = null;
+  isNewMode = false; // Flag for new property
 
   catalogos: CatalogosApiResponse = {};
   newProperty: Property = this.createEmptyProperty();
@@ -34,7 +35,7 @@ export class AdminComponent implements OnInit {
 
   constructor(
     private propertyService: PropertyService,
-    public authService: AuthService, // Make it public to access in template if needed, or use getter
+    public authService: AuthService,
     private router: Router
   ) {}
 
@@ -44,10 +45,9 @@ export class AdminComponent implements OnInit {
   }
 
   loadUserInfo(): void {
-    // Subscribe to user changes to get role
     this.authService.currentUser$.subscribe(user => {
       this.currentUser = user;
-      this.isAdmin = user?.role === 'admin'; // Update isAdmin flag
+      this.isAdmin = user?.role === 'admin';
     });
   }
 
@@ -59,8 +59,7 @@ export class AdminComponent implements OnInit {
         },
         error: (err) => {
           console.error('Error al cerrar sesión:', err);
-          // Force clear storage and navigate even if API call fails
-          this.authService.logout(); // Llama a la función de logout local
+          this.authService.logout(); // Force clear local storage
           this.currentUser = null;
           this.isAdmin = false;
           this.router.navigate(['/login']);
@@ -69,7 +68,6 @@ export class AdminComponent implements OnInit {
     }
   }
 
-  // ¡¡FUNCIÓN CORREGIDA!!
   createEmptyProperty(): Property {
     return {
       titulo: '',
@@ -128,21 +126,33 @@ export class AdminComponent implements OnInit {
         this.errorMessage = 'Error al cargar datos. Revisa la consola (backend y frontend).';
         console.error(err);
         this.isLoading = false;
-         // Handle potential 401/403 errors - maybe logout?
          if (err.status === 401 || err.status === 403) {
             console.error("Authentication/Authorization error loading data. Logging out.");
-            this.logout(); // Or navigate directly
+            this.logout();
          }
       }
     });
   }
 
-  // --- Métodos de Propiedades (sin cambios) ---
   editProperty(prop: Property) {
     this.editingProperty = JSON.parse(JSON.stringify(prop));
     this.editingImages = prop.imagenes ? [...prop.imagenes] : [];
     this.selectedFiles = [];
+    this.isNewMode = false; // Estamos editando
   }
+
+  // Lógica para el formulario de agregar (separada)
+  showAddForm() {
+    this.newProperty = this.createEmptyProperty();
+    this.editingProperty = null; // Nos aseguramos de no estar editando
+    this.selectedFiles = [];
+    this.editingImages = [];
+    this.isNewMode = true; // Estamos agregando
+    // Mostramos el formulario de agregar
+    // En tu HTML actual, el formulario de agregar se muestra con !editingProperty
+    // Si quieres un botón explícito, necesitarías otra variable
+  }
+
 
   saveChanges() {
     if (!this.editingProperty) return;
@@ -153,12 +163,12 @@ export class AdminComponent implements OnInit {
       next: () => {
         if (this.selectedFiles.length > 0 && this.editingProperty?.id) {
           this.uploadSelectedImages(this.editingProperty.id, () => {
-            this.loadData(); // Reload data after successful upload
-            this.cancelEdit(); // Close edit form
+            this.loadData();
+            this.cancelEdit();
           });
         } else {
-          this.loadData(); // Reload data if no images were uploaded
-          this.cancelEdit(); // Close edit form
+          this.loadData();
+          this.cancelEdit();
         }
       },
       error: (err) => {
@@ -168,18 +178,19 @@ export class AdminComponent implements OnInit {
     });
   }
 
-
   cancelEdit() {
     this.editingProperty = null;
     this.selectedFiles = [];
     this.editingImages = [];
+    this.isNewMode = false;
+    this.newProperty = this.createEmptyProperty(); // Limpia el formulario de nuevo
   }
 
   deleteProperty(id: number | undefined) {
     if (!id || !confirm('¿Seguro que deseas eliminar esta propiedad? (Borrado lógico)')) return;
 
     this.propertyService.delete(id).subscribe({
-      next: () => this.loadData(), // Reload data on success
+      next: () => this.loadData(),
       error: (err) => {
         this.errorMessage = `Error al eliminar propiedad: ${err.error?.error || err.message}`;
         console.error(err);
@@ -195,14 +206,12 @@ export class AdminComponent implements OnInit {
         const newId = response.id;
         if (this.selectedFiles.length > 0 && newId) {
            this.uploadSelectedImages(newId, () => {
-             this.loadData(); // Reload data after successful upload
-             this.newProperty = this.createEmptyProperty(); // Reset form
-             this.selectedFiles = [];
+             this.loadData();
+             this.cancelEdit(); // Reutilizamos cancelEdit para limpiar
            });
         } else {
-           this.loadData(); // Reload data if no images were added
-           this.newProperty = this.createEmptyProperty(); // Reset form
-           this.selectedFiles = [];
+           this.loadData();
+           this.cancelEdit(); // Reutilizamos cancelEdit para limpiar
         }
       },
       error: (err) => {
@@ -213,7 +222,6 @@ export class AdminComponent implements OnInit {
   }
 
   normalizeNullValues(prop: Property) {
-      // (Keep existing implementation)
       const keys: (keyof Property)[] = [
         'descripcion', 'precio', 'precio_alquiler', 'valor_administracion',
         'anio_construccion', 'piso', 'direccion', 'codigo_postal', 'lat', 'lng',
@@ -225,23 +233,18 @@ export class AdminComponent implements OnInit {
       ];
 
       for (const key of keys) {
-        // Revisa si la propiedad existe antes de verificar si es string vacío
-        if (prop.hasOwnProperty(key)) {
-            const value = prop[key as keyof Property];
-            if (value === '' || value === undefined) {
-               (prop as any)[key] = null;
-            }
+        if (prop[key] === '' || prop[key] === undefined) {
+           (prop as any)[key] = null;
+        }
+        // Manejar campos numéricos que pueden ser 0 pero no nulos si se dejan vacíos
+        const numericFields: (keyof Property)[] = [
+          'habitaciones', 'alcobas', 'banos', 'banos_medios', 'estacionamientos',
+          'm2_terreno', 'm2_construccion', 'm2_privada'
+        ];
+        if (numericFields.includes(key) && prop[key] === null) {
+           (prop as any)[key] = 0;
         }
       }
-       // Asegura que los valores numéricos que pueden ser 0 se manejen correctamente
-       const numericKeys: (keyof Property)[] = ['habitaciones', 'alcobas', 'banos', 'banos_medios', 'estacionamientos', 'm2_terreno', 'm2_construccion', 'm2_privada'];
-       for (const key of numericKeys) {
-           if (prop[key] === '' || prop[key] === undefined || prop[key] === null) {
-              (prop as any)[key] = 0; // O mantenlo como null si tu DB lo prefiere
-           }
-       }
-
-       // Ensure boolean is handled correctly
       if (prop.convenio_validado === undefined || prop.convenio_validado === null) {
           prop.convenio_validado = false;
       }
@@ -249,7 +252,6 @@ export class AdminComponent implements OnInit {
 
 
   getCatalogoNombre(catalogoKey: keyof CatalogosApiResponse, id: number | null | undefined): string {
-    // (Keep existing implementation)
     if (id === null || id === undefined || !this.catalogos || !this.catalogos[catalogoKey]) {
       return 'N/A';
     }
@@ -259,12 +261,11 @@ export class AdminComponent implements OnInit {
         return 'Error';
     }
     const item = items.find(c => c.id === id);
-    return item ? item.nombre : `ID ${id} ?`; // Show ID if name not found
+    return item ? item.nombre : `ID ${id} ?`;
   }
 
 
   onFileSelected(event: Event) {
-    // (Keep existing implementation)
      const input = event.target as HTMLInputElement;
      if (input.files) {
        this.selectedFiles = Array.from(input.files);
@@ -278,50 +279,45 @@ export class AdminComponent implements OnInit {
       }
 
       this.uploadingImages = true;
-      const uploadObservables: Observable<any>[] = []; // Store observables
+      const uploadObservables: Observable<any>[] = [];
 
       this.selectedFiles.forEach((file, index) => {
-        // Determine if it should be principal: only if it's the first file AND
-        // either we are NOT editing, OR we ARE editing and there are no existing images.
+        // Lógica corregida:
+        // Es principal si es el primer archivo (index === 0) Y
+        // (estamos en modo "Nuevo" O estamos en modo "Editar" y no hay imágenes existentes)
         const noExistingImages = !this.editingImages || this.editingImages.length === 0;
-        const esPrincipal = index === 0 && (this.newProperty || noExistingImages); // Check if adding new or if no existing images
+        const esPrincipal = index === 0 && (this.isNewMode || noExistingImages);
 
-        // Add the upload observable to the array
         uploadObservables.push(
             this.propertyService.uploadImage(propiedadId, file, esPrincipal)
         );
       });
 
-      // Execute all uploads concurrently
       forkJoin(uploadObservables).subscribe({
         next: (results) => {
           console.log('Todas las imágenes subidas:', results);
           this.uploadingImages = false;
-          callback(); // Execute callback after all uploads succeed
+          callback();
         },
         error: (err) => {
           console.error('Error durante la subida de una o más imágenes:', err);
           this.errorMessage = `Error al subir imágenes: ${err.error?.error || err.message}`;
           this.uploadingImages = false;
-          // Optionally call callback even on error, depending on desired behavior
           callback();
         }
       });
     }
 
   deleteImage(propiedadId: number, imagenId: number) {
-    // (Keep existing implementation)
      if (!confirm('¿Eliminar esta imagen?')) return;
 
      this.propertyService.deleteImage(propiedadId, imagenId).subscribe({
        next: () => {
-         // Update local state immediately
          if(this.editingProperty && this.editingProperty.imagenes) {
             this.editingProperty.imagenes = this.editingProperty.imagenes.filter(img => img.id !== imagenId);
-            this.editingImages = [...this.editingProperty.imagenes]; // Update editingImages too
+            this.editingImages = [...this.editingProperty.imagenes];
          }
-         // Optionally reload all data if not editing or to ensure consistency
-         this.loadData(); // Recargar para asegurar consistencia
+         // No es necesario recargar toda la data, solo actualizar el local
        },
        error: (err) => {
          this.errorMessage = `Error al eliminar imagen: ${err.error?.error || err.message}`;
@@ -331,18 +327,14 @@ export class AdminComponent implements OnInit {
   }
 
   setPrincipal(propiedadId: number, imagenId: number) {
-     // (Keep existing implementation)
      this.propertyService.setPrincipalImage(propiedadId, imagenId).subscribe({
        next: () => {
-         // Update local state immediately
          if(this.editingProperty && this.editingProperty.imagenes) {
              this.editingProperty.imagenes.forEach(img => {
                  img.es_principal = img.id === imagenId;
              });
-             this.editingImages = [...this.editingProperty.imagenes]; // Update editingImages
+             this.editingImages = [...this.editingProperty.imagenes];
          }
-          // Optionally reload all data
-         this.loadData(); // Recargar para asegurar consistencia
        },
        error: (err) => {
           this.errorMessage = `Error al establecer imagen principal: ${err.error?.error || err.message}`;
@@ -353,17 +345,15 @@ export class AdminComponent implements OnInit {
 
 
   getPrincipalImage(property: Property): string | null {
-    // (Keep existing implementation)
      if (!property.imagenes || property.imagenes.length === 0) {
        return null;
      }
      const principal = property.imagenes.find(img => img.es_principal);
-     return principal ? principal.url : property.imagenes[0].url; // Fallback to first image
+     return principal ? principal.url : property.imagenes[0].url;
   }
 
 
   removeSelectedFile(index: number) {
-    // (Keep existing implementation)
      this.selectedFiles.splice(index, 1);
   }
 
