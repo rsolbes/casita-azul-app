@@ -15,35 +15,31 @@
   }
 
   @if (!isLoading && !errorMessage) {
-    
+
     @if (properties.length > 0) {
       <div class="table-container">
         <table>
           <thead>
             <tr>
+              <th>Imagen</th>
               <th>Acciones</th>
-
               <th>ID</th>
               <th>Título</th>
               <th>Descripción</th>
               <th>Dirección</th>
               <th>Código Postal</th>
-
               <th>Tipo Negocio</th>
               <th>Tipo Propiedad</th>
               <th>Estado Publicación</th>
               <th>Estado Físico</th>
-              
               <th>Captado por</th>
               <th>Agente Asignado</th>
               <th>Agente Externo</th>
-              
               <th>Precio</th>
               <th>Precio Alquiler</th>
               <th>Valor Admin.</th>
               <th>Moneda</th>
               <th>Frec. Alquiler</th>
-
               <th>Habitaciones</th>
               <th>Alcobas</th>
               <th>Baños</th>
@@ -54,20 +50,16 @@
               <th>M² Terreno</th>
               <th>M² Const.</th>
               <th>M² Privada</th>
-
               <th>Estado</th>
               <th>Ciudad</th>
               <th>Zona</th>
-
               <th>Latitud</th>
               <th>Longitud</th>
-
               <th>Convenio Validado</th>
               <th>Validado por</th>
               <th>Convenio URL</th>
               <th>Fecha Validación</th>
               <th>Registro Público</th>
-              
               <th>Visitas</th>
               <th>Creado</th>
               <th>Actualizado</th>
@@ -76,32 +68,34 @@
           <tbody>
             @for (prop of properties; track prop.id) {
               <tr>
+                <td class="image-cell">
+                  @if (getPrincipalImage(prop)) {
+                    <img [src]="getPrincipalImage(prop)" alt="Imagen de {{ prop.titulo }}" class="property-thumbnail">
+                  } @else {
+                    <div class="no-image">Sin imagen</div>
+                  }
+                </td>
                 <td>
                   <button (click)="editProperty(prop)">✏️ Editar</button>
                   <button (click)="deleteProperty(prop.id!)">🗑️ Eliminar</button>
                 </td>
-
                 <td>{{ prop.id }}</td>
                 <td>{{ prop.titulo }}</td>
                 <td title="{{ prop.descripcion }}">{{ (prop.descripcion || 'N/A') | slice:0:50 }}...</td>
                 <td>{{ prop.direccion || 'N/A' }}</td>
                 <td>{{ prop.codigo_postal || 'N/A' }}</td>
-
                 <td>{{ getCatalogoNombre('tipos_negocio', prop.tipo_negocio_id) }}</td>
                 <td>{{ getCatalogoNombre('tipos_propiedad', prop.tipo_propiedad_id) }}</td>
                 <td>{{ getCatalogoNombre('estados_publicacion', prop.estado_publicacion_id) }}</td>
                 <td>{{ getCatalogoNombre('estados_fisicos', prop.estado_fisico_id) }}</td>
-                
                 <td>{{ getCatalogoNombre('agentes', prop.captado_por_agente_id) }}</td>
                 <td>{{ getCatalogoNombre('agentes', prop.agente_id) }}</td>
                 <td>{{ getCatalogoNombre('agentes_externos', prop.agente_externo_id) }}</td>
-
                 <td>{{ prop.precio | currency:'USD':'symbol':'1.0-0' }}</td>
                 <td>{{ prop.precio_alquiler | currency:'USD':'symbol':'1.0-0' }}</td>
                 <td>{{ prop.valor_administracion | currency:'USD':'symbol':'1.0-0' }}</td>
                 <td>{{ getCatalogoNombre('monedas', prop.moneda_id) }}</td>
                 <td>{{ getCatalogoNombre('frecuencias_alquiler', prop.frecuencia_alquiler_id) }}</td>
-
                 <td>{{ prop.habitaciones }}</td>
                 <td>{{ prop.alcobas }}</td>
                 <td>{{ prop.banos }}</td>
@@ -112,20 +106,16 @@
                 <td>{{ prop.m2_terreno }} m²</td>
                 <td>{{ prop.m2_construccion }} m²</td>
                 <td>{{ prop.m2_privada }} m²</td>
-
                 <td>{{ getCatalogoNombre('estados', prop.estado_id) }}</td>
                 <td>{{ getCatalogoNombre('ciudades', prop.ciudad_id) }}</td>
                 <td>{{ getCatalogoNombre('zonas', prop.zona_id) }}</td>
-                
                 <td>{{ prop.lat || 'N/A' }}</td>
                 <td>{{ prop.lng || 'N/A' }}</td>
-                
                 <td>{{ prop.convenio_validado ? 'Sí' : 'No' }}</td>
                 <td>{{ getCatalogoNombre('agentes', prop.validado_por_usuario_id) }}</td>
                 <td>{{ prop.convenio_url || 'N/A' }}</td>
                 <td>{{ prop.fecha_validacion | date:'short' }}</td>
                 <td>{{ prop.registro_publico || 'N/A' }}</td>
-                
                 <td>{{ prop.visitas }}</td>
                 <td>{{ prop.created_at | date:'short' }}</td>
                 <td>{{ prop.updated_at | date:'short' }}</td>
@@ -141,7 +131,7 @@
     @if (editingProperty) {
       <section class="form-section editing-section">
         <h3>Editando Propiedad ID: {{ editingProperty.id }}</h3>
-        
+
         <form class="property-form" (ngSubmit)="saveChanges()">
           <div class="form-grid">
 
@@ -151,6 +141,62 @@
               <label>Descripción: <textarea [(ngModel)]="editingProperty.descripcion" name="edit_desc"></textarea></label>
               <label>Dirección: <input [(ngModel)]="editingProperty.direccion" name="edit_dir" /></label>
               <label>Código Postal: <input [(ngModel)]="editingProperty.codigo_postal" name="edit_cp" /></label>
+            </fieldset>
+
+            <!-- Sección de Imágenes -->
+            <fieldset class="images-section">
+              <legend>📸 Imágenes de la Propiedad</legend>
+
+              @if (editingImages && editingImages.length > 0) {
+                <div class="images-grid">
+                  @for (img of editingImages; track img.id) {
+                    <div class="image-item">
+                      <img [src]="img.url" [alt]="img.nombre_archivo">
+                      <div class="image-actions">
+                        @if (img.es_principal) {
+                          <span class="badge-principal">⭐ Principal</span>
+                        } @else {
+                          <button type="button" class="btn-small" (click)="setPrincipal(editingProperty.id!, img.id)">
+                            Hacer Principal
+                          </button>
+                        }
+                        <button type="button" class="btn-delete-img" (click)="deleteImage(editingProperty.id!, img.id)">
+                          🗑️
+                        </button>
+                      </div>
+                    </div>
+                  }
+                </div>
+              } @else {
+                <p class="no-images-message">No hay imágenes para esta propiedad.</p>
+              }
+
+              <div class="upload-section">
+                <label class="file-upload-label">
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    (change)="onFileSelected($event)"
+                    name="edit_images"
+                  />
+                  Seleccionar nuevas imágenes
+                </label>
+
+                @if (selectedFiles.length > 0) {
+                  <div class="selected-files">
+                    <p>Archivos seleccionados ({{ selectedFiles.length }}):</p>
+                    <ul>
+                      @for (file of selectedFiles; track $index) {
+                        <li>
+                          {{ file.name }}
+                          <button type="button" class="btn-remove-file" (click)="removeSelectedFile($index)">❌</button>
+                        </li>
+                      }
+                    </ul>
+                  </div>
+                }
+              </div>
             </fieldset>
 
             <fieldset>
@@ -189,7 +235,7 @@
               <label>M² Construcción: <input [(ngModel)]="editingProperty.m2_construccion" name="edit_m2c" type="number" /></label>
               <label>M² Privada: <input [(ngModel)]="editingProperty.m2_privada" name="edit_m2p" type="number" /></label>
             </fieldset>
-            
+
             <fieldset>
               <legend>Clasificación</legend>
               <label>Tipo de Negocio:
@@ -225,7 +271,7 @@
                 </select>
               </label>
             </fieldset>
-            
+
             <fieldset>
               <legend>Ubicación (Catálogos)</legend>
               <label>Estado:
@@ -253,14 +299,14 @@
                 </select>
               </label>
             </fieldset>
-            
+
             <fieldset>
               <legend>Ubicación (Coords. y Varios)</legend>
                 <label>Latitud: <input [(ngModel)]="editingProperty.lat" name="edit_lat" type="number" /></label>
                 <label>Longitud: <input [(ngModel)]="editingProperty.lng" name="edit_lng" type="number" /></label>
                 <label>Registro Público: <input [(ngModel)]="editingProperty.registro_publico" name="edit_reg_pub" /></label>
             </fieldset>
-            
+
             <fieldset>
               <legend>Agentes y Validación</legend>
               <label>Captado por (Agente):
@@ -303,7 +349,9 @@
 
           </div>
           <div class="form-actions">
-            <button type="submit">💾 Guardar Cambios</button>
+            <button type="submit" [disabled]="uploadingImages">
+              {{ uploadingImages ? '📤 Subiendo imágenes...' : '💾 Guardar Cambios' }}
+            </button>
             <button type="button" (click)="cancelEdit()">❌ Cancelar</button>
           </div>
         </form>
@@ -322,6 +370,39 @@
               <label>Descripción: <textarea [(ngModel)]="newProperty.descripcion" name="new_desc"></textarea></label>
               <label>Dirección: <input [(ngModel)]="newProperty.direccion" name="new_dir" /></label>
               <label>Código Postal: <input [(ngModel)]="newProperty.codigo_postal" name="new_cp" /></label>
+            </fieldset>
+
+            <!-- Sección de Imágenes para Nueva Propiedad -->
+            <fieldset class="images-section">
+              <legend>📸 Imágenes de la Propiedad</legend>
+
+              <div class="upload-section">
+                <label class="file-upload-label">
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    (change)="onFileSelected($event)"
+                    name="new_images"
+                  />
+                  Seleccionar imágenes
+                </label>
+
+                @if (selectedFiles.length > 0) {
+                  <div class="selected-files">
+                    <p>Archivos seleccionados ({{ selectedFiles.length }}):</p>
+                    <ul>
+                      @for (file of selectedFiles; track $index) {
+                        <li>
+                          {{ file.name }}
+                          <button type="button" class="btn-remove-file" (click)="removeSelectedFile($index)">❌</button>
+                        </li>
+                      }
+                    </ul>
+                    <p class="info-text">La primera imagen será la imagen principal</p>
+                  </div>
+                }
+              </div>
             </fieldset>
 
             <fieldset>
@@ -360,7 +441,7 @@
               <label>M² Construcción: <input [(ngModel)]="newProperty.m2_construccion" name="new_m2c" type="number" /></label>
               <label>M² Privada: <input [(ngModel)]="newProperty.m2_privada" name="new_m2p" type="number" /></label>
             </fieldset>
-            
+
             <fieldset>
               <legend>Clasificación</legend>
               <label>Tipo de Negocio:
@@ -396,7 +477,7 @@
                 </select>
               </label>
             </fieldset>
-            
+
             <fieldset>
               <legend>Ubicación (Catálogos)</legend>
               <label>Estado:
@@ -431,7 +512,7 @@
                 <label>Longitud: <input [(ngModel)]="newProperty.lng" name="new_lng" type="number" /></label>
                 <label>Registro Público: <input [(ngModel)]="newProperty.registro_publico" name="new_reg_pub" /></label>
             </fieldset>
-            
+
             <fieldset>
               <legend>Agentes y Validación</legend>
               <label>Captado por (Agente):
@@ -474,11 +555,13 @@
 
           </div>
           <div class="form-actions">
-            <button type="submit">➕ Agregar propiedad</button>
+            <button type="submit" [disabled]="uploadingImages">
+              {{ uploadingImages ? '📤 Subiendo imágenes...' : '➕ Agregar propiedad' }}
+            </button>
           </div>
         </form>
       </section>
     }
-    
+
   }
 </main>

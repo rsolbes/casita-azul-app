@@ -1,8 +1,8 @@
 import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
-import { PropertyService, Property, CatalogosApiResponse } from './services/property.service';
-import { forkJoin } from 'rxjs'; // Importante para peticiones en paralelo
+import { PropertyService, Property, PropertyImage, CatalogosApiResponse } from './services/property.service';
+import { forkJoin } from 'rxjs';
 
 @Component({
   selector: 'app-root',
@@ -17,12 +17,14 @@ export class AppComponent implements OnInit {
   errorMessage = '';
   properties: Property[] = [];
   editingProperty: Property | null = null;
-  
-  // Objeto para almacenar todos los catálogos
-  catalogos: CatalogosApiResponse = {};
 
-  // Propiedad 'plantilla' para el formulario de agregar
+  catalogos: CatalogosApiResponse = {};
   newProperty: Property = this.createEmptyProperty();
+
+  // Variables para manejo de imágenes
+  selectedFiles: File[] = [];
+  uploadingImages = false;
+  editingImages: PropertyImage[] = [];
 
   constructor(private propertyService: PropertyService) {}
 
@@ -31,7 +33,6 @@ export class AppComponent implements OnInit {
   }
 
   createEmptyProperty(): Property {
-    // Devuelve un objeto limpio para el formulario de 'nuevo'
     return {
       titulo: '',
       descripcion: null,
@@ -67,7 +68,8 @@ export class AppComponent implements OnInit {
       zona_id: null,
       agente_id: null,
       agente_externo_id: null,
-      validado_por_usuario_id: null
+      validado_por_usuario_id: null,
+      imagenes: []
     };
   }
 
@@ -75,7 +77,6 @@ export class AppComponent implements OnInit {
     this.isLoading = true;
     this.errorMessage = '';
 
-    // Usamos forkJoin para esperar a que ambas peticiones terminen
     forkJoin({
       props: this.propertyService.getAll(),
       cats: this.propertyService.getCatalogos()
@@ -94,20 +95,29 @@ export class AppComponent implements OnInit {
   }
 
   editProperty(prop: Property) {
-    // Creamos una copia profunda para no modificar la tabla directamente
     this.editingProperty = JSON.parse(JSON.stringify(prop));
+    this.editingImages = prop.imagenes ? [...prop.imagenes] : [];
+    this.selectedFiles = [];
   }
 
   saveChanges() {
     if (!this.editingProperty) return;
-    
-    // Convertimos IDs de select (que pueden ser string) a null si están vacíos
+
     this.normalizeNullValues(this.editingProperty);
 
     this.propertyService.update(this.editingProperty).subscribe({
       next: () => {
-        this.loadData(); // Recarga todo
-        this.editingProperty = null;
+        // Si hay archivos seleccionados, subirlos
+        if (this.selectedFiles.length > 0 && this.editingProperty?.id) {
+          this.uploadSelectedImages(this.editingProperty.id, () => {
+            this.loadData();
+            this.editingProperty = null;
+            this.selectedFiles = [];
+          });
+        } else {
+          this.loadData();
+          this.editingProperty = null;
+        }
       },
       error: (err) => {
         alert('Error al actualizar propiedad');
@@ -118,11 +128,13 @@ export class AppComponent implements OnInit {
 
   cancelEdit() {
     this.editingProperty = null;
+    this.selectedFiles = [];
+    this.editingImages = [];
   }
 
   deleteProperty(id: number | undefined) {
     if (!id || !confirm('¿Seguro que deseas eliminar esta propiedad? (Borrado lógico)')) return;
-    
+
     this.propertyService.delete(id).subscribe({
       next: () => this.loadData(),
       error: (err) => {
@@ -133,13 +145,23 @@ export class AppComponent implements OnInit {
   }
 
   addProperty() {
-    // Convertimos IDs de select (que pueden ser string) a null si están vacíos
     this.normalizeNullValues(this.newProperty);
 
     this.propertyService.add(this.newProperty).subscribe({
-      next: () => {
-        this.loadData(); // Recarga todo
-        this.newProperty = this.createEmptyProperty(); // Resetea el formulario
+      next: (response) => {
+        const newId = response.id;
+
+        // Si hay archivos seleccionados, subirlos
+        if (this.selectedFiles.length > 0 && newId) {
+          this.uploadSelectedImages(newId, () => {
+            this.loadData();
+            this.newProperty = this.createEmptyProperty();
+            this.selectedFiles = [];
+          });
+        } else {
+          this.loadData();
+          this.newProperty = this.createEmptyProperty();
+        }
       },
       error: (err) => {
         alert('Error al agregar propiedad');
@@ -147,17 +169,15 @@ export class AppComponent implements OnInit {
       }
     });
   }
-  
-  // Función útil para manejar los <select>
-  // Un <select> con valor "" (string vacío) debe ser guardado como 'null' en la DB
+
   normalizeNullValues(prop: Property) {
     const keys: (keyof Property)[] = [
-      'tipo_negocio_id', 'tipo_propiedad_id', 'estado_publicacion_id', 
-      'captado_por_agente_id', 'moneda_id', 'frecuencia_alquiler_id', 
-      'estado_fisico_id', 'estado_id', 'ciudad_id', 'zona_id', 'agente_id', 
+      'tipo_negocio_id', 'tipo_propiedad_id', 'estado_publicacion_id',
+      'captado_por_agente_id', 'moneda_id', 'frecuencia_alquiler_id',
+      'estado_fisico_id', 'estado_id', 'ciudad_id', 'zona_id', 'agente_id',
       'agente_externo_id', 'validado_por_usuario_id'
     ];
-    
+
     for (const key of keys) {
       if (prop[key] === '' || prop[key] === undefined) {
         (prop as any)[key] = null;
@@ -165,22 +185,106 @@ export class AppComponent implements OnInit {
     }
   }
 
-  /**
-   * Función para traducir un ID a su nombre usando el objeto de catálogos.
-   * @param catalogoKey El nombre del catálogo (ej: 'tipos_negocio', 'ciudades')
-   * @param id El ID que queremos traducir
-   * @returns El nombre correspondiente o 'N/A' si no se encuentra.
-   */
   getCatalogoNombre(catalogoKey: keyof CatalogosApiResponse, id: number | null | undefined): string {
-    // Si no hay ID o el catálogo no ha cargado, devolvemos 'N/A'
     if (!id || !this.catalogos[catalogoKey]) {
       return 'N/A';
     }
-    
-    // Buscamos el item en el arreglo del catálogo
+
     const item = this.catalogos[catalogoKey].find(c => c.id === id);
-    
-    // Devolvemos el nombre si se encontró, o 'N/A'
     return item ? item.nombre : 'N/A';
+  }
+
+  // --- Métodos para manejo de imágenes ---
+
+  onFileSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    if (input.files) {
+      this.selectedFiles = Array.from(input.files);
+    }
+  }
+
+  uploadSelectedImages(propiedadId: number, callback: () => void) {
+    if (this.selectedFiles.length === 0) {
+      callback();
+      return;
+    }
+
+    this.uploadingImages = true;
+    let uploadedCount = 0;
+
+    this.selectedFiles.forEach((file, index) => {
+      const esPrincipal = index === 0 && (!this.editingImages || this.editingImages.length === 0);
+
+      this.propertyService.uploadImage(propiedadId, file, esPrincipal).subscribe({
+        next: () => {
+          uploadedCount++;
+          if (uploadedCount === this.selectedFiles.length) {
+            this.uploadingImages = false;
+            callback();
+          }
+        },
+        error: (err) => {
+          console.error('Error al subir imagen:', err);
+          uploadedCount++;
+          if (uploadedCount === this.selectedFiles.length) {
+            this.uploadingImages = false;
+            callback();
+          }
+        }
+      });
+    });
+  }
+
+  deleteImage(propiedadId: number, imagenId: number) {
+    if (!confirm('¿Eliminar esta imagen?')) return;
+
+    this.propertyService.deleteImage(propiedadId, imagenId).subscribe({
+      next: () => {
+        // Actualizar la lista de imágenes localmente
+        this.editingImages = this.editingImages.filter(img => img.id !== imagenId);
+
+        // Actualizar en la propiedad en edición
+        if (this.editingProperty) {
+          this.editingProperty.imagenes = this.editingImages;
+        }
+
+        // Recargar datos
+        this.loadData();
+      },
+      error: (err) => {
+        alert('Error al eliminar imagen');
+        console.error(err);
+      }
+    });
+  }
+
+  setPrincipal(propiedadId: number, imagenId: number) {
+    this.propertyService.setPrincipalImage(propiedadId, imagenId).subscribe({
+      next: () => {
+        // Actualizar la lista de imágenes localmente
+        this.editingImages.forEach(img => {
+          img.es_principal = img.id === imagenId;
+        });
+
+        this.loadData();
+      },
+      error: (err) => {
+        alert('Error al establecer imagen principal');
+        console.error(err);
+      }
+    });
+  }
+
+  getPrincipalImage(property: Property): string | null {
+    if (!property.imagenes || property.imagenes.length === 0) {
+      return null;
+    }
+
+    const principal = property.imagenes.find(img => img.es_principal);
+    return principal ? principal.url : property.imagenes[0].url;
+  }
+
+  removeSelectedFile(index: number) {
+    this.selectedFiles.splice(index, 1);
   }
 }

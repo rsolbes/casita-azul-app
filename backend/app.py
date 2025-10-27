@@ -1,16 +1,30 @@
 import os
+import uuid
+from datetime import datetime
 import psycopg2
-from psycopg2.extras import RealDictCursor # ¡Muy importante para convertir filas a dict!
+from psycopg2.extras import RealDictCursor
 from flask import Flask, jsonify, request
 from flask_cors import CORS
+from supabase import create_client, Client
+from werkzeug.utils import secure_filename
+from dotenv import load_dotenv
+load_dotenv()
 
 app = Flask(__name__)
 CORS(app)
 
-# --- Configuración de la Base de Datos ---
+# Configuración de Supabase Storage
+SUPABASE_URL = "https://izozjytmktbuhpttczid.supabase.co"
+SUPABASE_KEY = os.getenv("SUPABASE_ANON_KEY")
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+BUCKET_NAME = "imagenes casas"
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def get_db_connection():
-    # Usamos los valores por defecto que me diste, pero priorizamos variables de entorno
     conn = psycopg2.connect(
         user=os.getenv("DB_USER", "postgres.izozjytmktbuhpttczid"),
         password=os.getenv("PASSWORD", "bddingsoftware123"),
@@ -22,20 +36,14 @@ def get_db_connection():
     return conn
 
 # --- Endpoint de Catálogos ---
-
 @app.route('/api/catalogos', methods=['GET'])
 def get_catalogos():
-    """
-    Endpoint para obtener todos los datos necesarios para los dropdowns (selects).
-    """
     catalogos = {}
     conn = None
     try:
         conn = get_db_connection()
-        # Usamos RealDictCursor para que los resultados ya sean listas de diccionarios
         cursor = conn.cursor(cursor_factory=RealDictCursor)
         
-        # Lista de tablas de catálogo que queremos
         tablas_catalogo = [
             'agentes', 'agentes_externos', 'ciudades', 'estados', 
             'estados_fisicos', 'estados_publicacion', 'frecuencias_alquiler',
@@ -46,7 +54,6 @@ def get_catalogos():
             cursor.execute(f"SELECT id, nombre FROM public.{tabla} ORDER BY nombre ASC;")
             catalogos[tabla] = cursor.fetchall()
             
-        # Para agentes, podríamos querer más datos
         cursor.execute("SELECT id, nombre, email, telefono FROM public.agentes ORDER BY nombre ASC;")
         catalogos['agentes'] = cursor.fetchall()
 
@@ -60,19 +67,35 @@ def get_catalogos():
         if conn:
             conn.close()
 
-# --- Endpoints de Propiedades (CRUD Completo) ---
-
+# --- Endpoints de Propiedades ---
 @app.route('/api/propiedades', methods=['GET'])
 def get_properties():
     conn = None
     try:
         conn = get_db_connection()
         cursor = conn.cursor(cursor_factory=RealDictCursor)
-        # Seleccionamos todas las propiedades que NO estén borradas lógicamente
-        cursor.execute("SELECT * FROM propiedades WHERE deleted_at IS NULL ORDER BY id ASC;")
+        
+        # Obtener propiedades con sus imágenes
+        query = """
+            SELECT p.*, 
+                   json_agg(
+                       json_build_object(
+                           'id', pi.id,
+                           'url', pi.url,
+                           'nombre_archivo', pi.nombre_archivo,
+                           'es_principal', pi.es_principal,
+                           'orden', pi.orden
+                       ) ORDER BY pi.orden ASC
+                   ) FILTER (WHERE pi.id IS NOT NULL) as imagenes
+            FROM propiedades p
+            LEFT JOIN propiedades_imagenes pi ON p.id = pi.propiedad_id
+            WHERE p.deleted_at IS NULL
+            GROUP BY p.id
+            ORDER BY p.id DESC;
+        """
+        cursor.execute(query)
         propiedades = cursor.fetchall()
         cursor.close()
-        # Envolvemos en un objeto para consistencia
         return jsonify({"properties": propiedades})
     except Exception as e:
         print(e)
@@ -81,6 +104,44 @@ def get_properties():
         if conn:
             conn.close()
 
+@app.route('/api/propiedades/<int:id>', methods=['GET'])
+def get_property(id):
+    conn = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        
+        # Obtener propiedad específica con sus imágenes
+        query = """
+            SELECT p.*, 
+                   json_agg(
+                       json_build_object(
+                           'id', pi.id,
+                           'url', pi.url,
+                           'nombre_archivo', pi.nombre_archivo,
+                           'es_principal', pi.es_principal,
+                           'orden', pi.orden
+                       ) ORDER BY pi.orden ASC
+                   ) FILTER (WHERE pi.id IS NOT NULL) as imagenes
+            FROM propiedades p
+            LEFT JOIN propiedades_imagenes pi ON p.id = pi.propiedad_id
+            WHERE p.id = %s AND p.deleted_at IS NULL
+            GROUP BY p.id;
+        """
+        cursor.execute(query, (id,))
+        propiedad = cursor.fetchone()
+        cursor.close()
+        
+        if propiedad:
+            return jsonify(propiedad)
+        else:
+            return jsonify({"error": "Propiedad no encontrada"}), 404
+    except Exception as e:
+        print(e)
+        return jsonify({"error": str(e)}), 500
+    finally:
+        if conn:
+            conn.close()
 
 @app.route('/api/propiedades', methods=['POST'])
 def add_property():
@@ -90,8 +151,6 @@ def add_property():
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        # SQL con TODOS los campos. data.get() devuelve None si la llave no existe
-        # Nota: created_at y updated_at se manejan con defaults en la DB
         query = """
             INSERT INTO propiedades (
                 titulo, descripcion, precio, precio_alquiler, valor_administracion, 
@@ -134,7 +193,6 @@ def add_property():
         if conn:
             conn.close()
 
-
 @app.route('/api/propiedades/<int:id>', methods=['PUT'])
 def update_property(id):
     data = request.json
@@ -143,7 +201,6 @@ def update_property(id):
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        # Query de actualización con todos los campos y updated_at
         query = """
             UPDATE propiedades SET
                 titulo = %s, descripcion = %s, precio = %s, precio_alquiler = %s, 
@@ -185,12 +242,8 @@ def update_property(id):
         if conn:
             conn.close()
 
-
 @app.route('/api/propiedades/<int:id>', methods=['DELETE'])
 def delete_property(id):
-    """
-    Implementa borrado lógico (soft delete) actualizando deleted_at.
-    """
     conn = None
     try:
         conn = get_db_connection()
@@ -206,6 +259,157 @@ def delete_property(id):
         if conn:
             conn.close()
 
+# --- Endpoints de Imágenes ---
+@app.route('/api/propiedades/<int:propiedad_id>/imagenes', methods=['POST'])
+def upload_image(propiedad_id):
+    """Subir una imagen a Supabase Storage y guardar referencia en BD"""
+    if 'file' not in request.files:
+        return jsonify({"error": "No file provided"}), 400
+    
+    file = request.files['file']
+    es_principal = request.form.get('es_principal', 'false').lower() == 'true'
+    
+    if file.filename == '':
+        return jsonify({"error": "No file selected"}), 400
+    
+    if not allowed_file(file.filename):
+        return jsonify({"error": "File type not allowed"}), 400
+    
+    conn = None
+    try:
+        # Generar nombre único para el archivo
+        file_extension = file.filename.rsplit('.', 1)[1].lower()
+        unique_filename = f"{propiedad_id}_{uuid.uuid4().hex}.{file_extension}"
+        file_path = f"propiedades/{unique_filename}"
+        
+        # Leer el archivo
+        file_content = file.read()
+        
+        # Subir a Supabase Storage
+        supabase.storage.from_(BUCKET_NAME).upload(
+            file_path,
+            file_content,
+            file_options={"content-type": file.content_type}
+        )
+        
+        # Obtener URL pública
+        public_url = supabase.storage.from_(BUCKET_NAME).get_public_url(file_path)
+        
+        # Guardar referencia en la base de datos
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Si es principal, desmarcar otras imágenes como principal
+        if es_principal:
+            cursor.execute(
+                "UPDATE propiedades_imagenes SET es_principal = FALSE WHERE propiedad_id = %s;",
+                (propiedad_id,)
+            )
+        
+        # Obtener el siguiente orden
+        cursor.execute(
+            "SELECT COALESCE(MAX(orden), -1) + 1 FROM propiedades_imagenes WHERE propiedad_id = %s;",
+            (propiedad_id,)
+        )
+        orden = cursor.fetchone()[0]
+        
+        # Insertar registro de imagen
+        cursor.execute(
+            """
+            INSERT INTO propiedades_imagenes (propiedad_id, url, nombre_archivo, es_principal, orden)
+            VALUES (%s, %s, %s, %s, %s)
+            RETURNING id;
+            """,
+            (propiedad_id, public_url, unique_filename, es_principal, orden)
+        )
+        
+        image_id = cursor.fetchone()[0]
+        conn.commit()
+        cursor.close()
+        
+        return jsonify({
+            "status": "success",
+            "id": image_id,
+            "url": public_url,
+            "nombre_archivo": unique_filename
+        }), 201
+        
+    except Exception as e:
+        print(e)
+        return jsonify({"error": str(e)}), 500
+    finally:
+        if conn:
+            conn.close()
+
+@app.route('/api/propiedades/<int:propiedad_id>/imagenes/<int:imagen_id>', methods=['DELETE'])
+def delete_image(propiedad_id, imagen_id):
+    """Eliminar imagen de Supabase Storage y BD"""
+    conn = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        
+        # Obtener información de la imagen
+        cursor.execute(
+            "SELECT nombre_archivo FROM propiedades_imagenes WHERE id = %s AND propiedad_id = %s;",
+            (imagen_id, propiedad_id)
+        )
+        imagen = cursor.fetchone()
+        
+        if not imagen:
+            return jsonify({"error": "Imagen no encontrada"}), 404
+        
+        # Eliminar de Supabase Storage
+        file_path = f"propiedades/{imagen['nombre_archivo']}"
+        supabase.storage.from_(BUCKET_NAME).remove([file_path])
+        
+        # Eliminar de la base de datos
+        cursor.execute(
+            "DELETE FROM propiedades_imagenes WHERE id = %s;",
+            (imagen_id,)
+        )
+        
+        conn.commit()
+        cursor.close()
+        return jsonify({"status": "deleted"})
+        
+    except Exception as e:
+        print(e)
+        return jsonify({"error": str(e)}), 500
+    finally:
+        if conn:
+            conn.close()
+
+@app.route('/api/propiedades/<int:propiedad_id>/imagenes/<int:imagen_id>/principal', methods=['PUT'])
+def set_principal_image(propiedad_id, imagen_id):
+    """Marcar una imagen como principal"""
+    conn = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Desmarcar todas las imágenes como principal
+        cursor.execute(
+            "UPDATE propiedades_imagenes SET es_principal = FALSE WHERE propiedad_id = %s;",
+            (propiedad_id,)
+        )
+        
+        # Marcar la imagen especificada como principal
+        cursor.execute(
+            "UPDATE propiedades_imagenes SET es_principal = TRUE WHERE id = %s AND propiedad_id = %s;",
+            (imagen_id, propiedad_id)
+        )
+        
+        conn.commit()
+        cursor.close()
+        return jsonify({"status": "success"})
+        
+    except Exception as e:
+        print(e)
+        return jsonify({"error": str(e)}), 500
+    finally:
+        if conn:
+            conn.close()
 
 if __name__ == '__main__':
     app.run(debug=True)

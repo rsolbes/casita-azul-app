@@ -2,7 +2,16 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
-// Interfaz de Propiedad COMPLETA
+// Interfaz para las imágenes
+export interface PropertyImage {
+  id: number;
+  url: string;
+  nombre_archivo: string;
+  es_principal: boolean;
+  orden: number;
+}
+
+// Interfaz de Propiedad COMPLETA (ahora con imágenes)
 export interface Property {
   id?: number;
   titulo: string;
@@ -45,6 +54,7 @@ export interface Property {
   agente_id?: number | null;
   agente_externo_id?: number | null;
   validado_por_usuario_id?: number | null;
+  imagenes?: PropertyImage[] | null; // Nueva propiedad para las imágenes
 }
 
 // Interfaz para la respuesta de la API de propiedades
@@ -57,19 +67,21 @@ export interface CatalogosApiResponse {
   [key: string]: { id: number; nombre: string }[];
 }
 
-
 @Injectable({
   providedIn: 'root'
 })
 export class PropertyService {
-  private apiUrl = 'http://127.0.0.1:5000/api'; // URL base de la API
+  private apiUrl = 'http://127.0.0.1:5000/api';
 
   constructor(private http: HttpClient) {}
 
   // --- Métodos de Propiedades ---
-
   getAll(): Observable<PropertiesApiResponse> {
     return this.http.get<PropertiesApiResponse>(`${this.apiUrl}/propiedades`);
+  }
+
+  getById(id: number): Observable<Property> {
+    return this.http.get<Property>(`${this.apiUrl}/propiedades/${id}`);
   }
 
   add(property: Property): Observable<any> {
@@ -84,9 +96,25 @@ export class PropertyService {
     return this.http.delete(`${this.apiUrl}/propiedades/${id}`);
   }
 
-  // --- Método de Catálogos ---
-
+  // --- Métodos de Catálogos ---
   getCatalogos(): Observable<CatalogosApiResponse> {
     return this.http.get<CatalogosApiResponse>(`${this.apiUrl}/catalogos`);
+  }
+
+  // --- Métodos de Imágenes ---
+  uploadImage(propiedadId: number, file: File, esPrincipal: boolean = false): Observable<any> {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('es_principal', esPrincipal.toString());
+
+    return this.http.post(`${this.apiUrl}/propiedades/${propiedadId}/imagenes`, formData);
+  }
+
+  deleteImage(propiedadId: number, imagenId: number): Observable<any> {
+    return this.http.delete(`${this.apiUrl}/propiedades/${propiedadId}/imagenes/${imagenId}`);
+  }
+
+  setPrincipalImage(propiedadId: number, imagenId: number): Observable<any> {
+    return this.http.put(`${this.apiUrl}/propiedades/${propiedadId}/imagenes/${imagenId}/principal`, {});
   }
 }

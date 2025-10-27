@@ -1,211 +1,223 @@
-/* 🎨 Estilos generales */
-* {
-  box-sizing: border-box;
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-}
-
-body {
-  margin: 0;
-  background: #f5f7fa;
-  color: #333;
-}
-
-/* 🏠 Contenedor principal */
-.container {
-  max-width: 1200px;
-  margin: 3rem auto;
-  padding: 2rem;
-  background: #ffffff;
-  border-radius: 16px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-}
-
-/* 🔹 Encabezado */
-header {
+/* Estilos para la celda de imagen en la tabla */
+.image-cell {
+  padding: 8px !important;
   text-align: center;
-  margin-bottom: 2rem;
 }
 
-header h1 {
-  font-size: 2rem;
-  color: #2c3e50;
+.property-thumbnail {
+  width: 80px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s;
+}
+
+.property-thumbnail:hover {
+  transform: scale(1.1);
+  cursor: pointer;
+}
+
+.no-image {
+  width: 80px;
+  height: 80px;
+  background: #f0f0f0;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: #999;
+  text-align: center;
+}
+
+/* Sección de imágenes en el formulario */
+.images-section {
+  grid-column: 1 / -1;
+  background: #f8f9fa;
+  border: 2px dashed #dee2e6;
+  border-radius: 8px;
+}
+
+.images-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.image-item {
+  position: relative;
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s;
+}
+
+.image-item:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.image-item img {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+  display: block;
+}
+
+.image-actions {
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: white;
+}
+
+.badge-principal {
+  background: #ffc107;
+  color: #000;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: bold;
+  text-align: center;
+}
+
+.btn-small {
+  padding: 6px 10px;
+  font-size: 12px;
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-small:hover {
+  background: #0056b3;
+}
+
+.btn-delete-img {
+  padding: 6px 10px;
+  font-size: 12px;
+  background: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-delete-img:hover {
+  background: #c82333;
+}
+
+.no-images-message {
+  text-align: center;
+  padding: 30px;
+  color: #6c757d;
+  font-style: italic;
+}
+
+/* Sección de carga de archivos */
+.upload-section {
+  margin-top: 20px;
+  padding: 20px;
+  background: white;
+  border-radius: 8px;
+}
+
+.file-upload-label {
+  display: inline-block;
+  padding: 12px 24px;
+  background: #28a745;
+  color: white;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s;
+  font-weight: 500;
+}
+
+.file-upload-label:hover {
+  background: #218838;
+}
+
+.file-upload-label input[type="file"] {
+  display: none;
+}
+
+.selected-files {
+  margin-top: 15px;
+  padding: 15px;
+  background: #f8f9fa;
+  border-radius: 6px;
+  border: 1px solid #dee2e6;
+}
+
+.selected-files p {
+  margin: 0 0 10px 0;
+  font-weight: 600;
+  color: #495057;
+}
+
+.selected-files ul {
+  list-style: none;
+  padding: 0;
   margin: 0;
 }
 
-/* 🧾 Tabla */
-.table-container {
-  overflow-x: auto;
-  border-radius: 8px;
-  margin-bottom: 2rem;
+.selected-files li {
+  padding: 8px 12px;
+  background: white;
+  margin-bottom: 8px;
+  border-radius: 4px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border: 1px solid #dee2e6;
 }
 
-table {
-  width: 100%;
-  border-collapse: collapse;
-  min-width: 800px;
-}
-
-thead {
-  background: #3498db;
-  color: white;
-}
-
-th, td {
-  text-align: left;
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid #ddd;
-}
-
-tbody tr:hover {
-  background: #f2faff;
-}
-
-/* ✏️ Botones de acción en la tabla */
-td button {
-  margin-right: 4px;
-  padding: 6px 12px;
+.btn-remove-file {
+  background: transparent;
   border: none;
-  border-radius: 6px;
-  color: white;
   cursor: pointer;
+  font-size: 14px;
+  padding: 4px 8px;
+  transition: transform 0.2s;
 }
 
-/* Botón Editar (azul) */
-td button:nth-child(1) {
-  background: #3498db;
-}
-td button:nth-child(1):hover {
-  background: #2d83c6;
+.btn-remove-file:hover {
+  transform: scale(1.2);
 }
 
-/* Botón Eliminar (rojo) */
-td button:nth-child(2) {
-  background: #e74c3c;
-}
-td button:nth-child(2):hover {
-  background: #c0392b;
-}
-
-
-/* ⚠️ Mensajes de error y carga */
-.error-message {
-  background: #ffecec;
-  color: #c0392b;
-  border-left: 6px solid #e74c3c;
-  padding: 1rem;
-  border-radius: 8px;
-  margin-bottom: 1.5rem;
+.info-text {
+  margin-top: 10px;
+  font-size: 13px;
+  color: #6c757d;
+  font-style: italic;
 }
 
-/* ⚙️ Estilos de Formulario (Agregar/Editar) */
-.form-section {
-  margin-top: 2rem;
-  padding: 1.5rem;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  background-color: #f9f9f9;
-}
-
-.editing-section {
-  border-color: #fca311;
-  background-color: #fffaf0;
-}
-
-/* Solución para apilar campos y botón */
-.property-form {
-  display: flex;
-  flex-direction: column; 
-}
-
-.property-form .form-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 1.5rem;
-}
-
-.property-form fieldset {
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  padding: 1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.property-form legend {
-  font-weight: bold;
-  color: #005f73;
-  padding: 0 0.5rem;
-}
-
-.property-form label {
-  display: flex;
-  flex-direction: column;
-  font-size: 0.9rem;
-  color: #333;
-}
-
-.property-form input[type="text"],
-.property-form input[type="number"],
-.property-form input[type="url"],
-.property-form textarea,
-.property-form select {
-  width: 100%;
-  padding: 8px;
-  margin-top: 4px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  box-sizing: border-box; /* Importante para que el padding no rompa el layout */
-}
-
-.property-form input[type="checkbox"] {
-  width: auto;
-  align-self: flex-start;
-  margin-top: 8px;
-}
-
-/* Contenedor de botones del formulario */
-.property-form .form-actions {
-  margin-top: 1.5rem;
-  display: flex;
-  gap: 1rem;
-}
-
-/* Botones del formulario */
-.property-form .form-actions button {
-  padding: 10px 20px;
-  font-size: 1rem;
-  border: none;
-  border-radius: 4px;
-  color: white;
-  cursor: pointer;
-  
-  /* --- ESTA ES LA CORRECCIÓN PARA EL ANCHO DEL BOTÓN --- */
-  width: auto; 
-}
-
-.property-form .form-actions button[type="submit"] {
-  background-color: #005f73;
-}
-.property-form .form-actions button[type="button"] {
-  background-color: #ae2012;
-}
-
-
-/* 📱 Responsivo */
+/* Ajustes responsivos */
 @media (max-width: 768px) {
-  .container {
-    margin: 1rem;
-    padding: 1rem;
+  .images-grid {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
   }
-  header h1 {
-    font-size: 1.5rem;
+
+  .image-item img {
+    height: 120px;
   }
-  th, td {
-    padding: 0.5rem;
+
+  .property-thumbnail {
+    width: 60px;
+    height: 60px;
   }
-  /* En móviles, la rejilla del form es de 1 columna */
-  .property-form .form-grid {
-    grid-template-columns: 1fr;
+
+  .no-image {
+    width: 60px;
+    height: 60px;
+    font-size: 9px;
   }
 }
