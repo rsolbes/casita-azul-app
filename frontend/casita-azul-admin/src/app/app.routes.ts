@@ -8,7 +8,7 @@ import { ManageAgentsComponent } from './components/manage-agents/manage-agents.
 
 // Import guards
 import { AuthGuard } from './guards/auth.guard';
-import { AdminGuard } from './guards/admin-guard'; // CORRECTED PATH: Check if './guards/' exists
+import { AdminGuard } from './guards/admin-guard'; // Usa el nombre de archivo con guión
 
 export const routes: Routes = [
   {
@@ -23,12 +23,12 @@ export const routes: Routes = [
   {
     path: 'admin/users', // User management page
     component: ManageUsersComponent,
-    canActivate: [AuthGuard, AdminGuard] // Uses AdminGuard
+    canActivate: [AuthGuard, AdminGuard] // MUST be logged in AND admin
   },
   {
     path: 'admin/agents', // Agent management page
     component: ManageAgentsComponent,
-    canActivate: [AuthGuard, AdminGuard] // Uses AdminGuard
+    canActivate: [AuthGuard, AdminGuard] // MUST be logged in AND admin
   },
   {
     path: '',

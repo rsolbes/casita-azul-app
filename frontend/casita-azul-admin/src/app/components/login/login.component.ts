@@ -57,7 +57,7 @@ export class LoginComponent {
         this.loading = false;
         this.successMessage = 'Login exitoso!';
         setTimeout(() => {
-          this.router.navigate(['/admin']);
+          this.router.navigate(['/admin']); // <-- CORREGIDO (redirige a /admin)
         }, 1000);
       },
       error: (error) => {

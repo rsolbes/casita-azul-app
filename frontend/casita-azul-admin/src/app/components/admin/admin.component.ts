@@ -60,7 +60,7 @@ export class AdminComponent implements OnInit {
         error: (err) => {
           console.error('Error al cerrar sesión:', err);
           // Force clear storage and navigate even if API call fails
-          localStorage.clear(); // Consider calling the service method if preferred
+          this.authService.logout(); // Llama a la función de logout local
           this.currentUser = null;
           this.isAdmin = false;
           this.router.navigate(['/login']);
@@ -69,13 +69,44 @@ export class AdminComponent implements OnInit {
     }
   }
 
+  // ¡¡FUNCIÓN CORREGIDA!!
   createEmptyProperty(): Property {
-    // (Keep existing implementation)
     return {
       titulo: '',
       descripcion: null,
       precio: null,
-      // ... rest of the properties initialized to null or default values
+      precio_alquiler: null,
+      valor_administracion: null,
+      habitaciones: 0,
+      alcobas: 0,
+      banos: 0,
+      banos_medios: 0,
+      estacionamientos: 0,
+      anio_construccion: null,
+      piso: null,
+      m2_terreno: 0,
+      m2_construccion: 0,
+      m2_privada: 0,
+      direccion: null,
+      codigo_postal: null,
+      lat: null,
+      lng: null,
+      registro_publico: null,
+      convenio_url: null,
+      convenio_validado: false,
+      tipo_negocio_id: null,
+      tipo_propiedad_id: null,
+      estado_publicacion_id: null,
+      captado_por_agente_id: null,
+      moneda_id: null,
+      frecuencia_alquiler_id: null,
+      estado_fisico_id: null,
+      estado_id: null,
+      ciudad_id: null,
+      zona_id: null,
+      agente_id: null,
+      agente_externo_id: null,
+      validado_por_usuario_id: null,
       imagenes: []
     };
   }
@@ -106,7 +137,7 @@ export class AdminComponent implements OnInit {
     });
   }
 
-  // --- Keep all existing property methods (editProperty, saveChanges, etc.) ---
+  // --- Métodos de Propiedades (sin cambios) ---
   editProperty(prop: Property) {
     this.editingProperty = JSON.parse(JSON.stringify(prop));
     this.editingImages = prop.imagenes ? [...prop.imagenes] : [];
@@ -194,12 +225,22 @@ export class AdminComponent implements OnInit {
       ];
 
       for (const key of keys) {
-        if (prop[key] === '' || prop[key] === undefined || prop[key] === 0 && (key === 'habitaciones' || key === 'alcobas' || key === 'banos' || key === 'banos_medios' || key === 'estacionamientos' || key === 'm2_terreno' || key === 'm2_construccion' || key === 'm2_privada')) {
-           // For numeric fields that can be 0, handle them specifically if needed
-           // Otherwise, generally set empty strings/undefined to null for DB consistency
-           (prop as any)[key] = null;
+        // Revisa si la propiedad existe antes de verificar si es string vacío
+        if (prop.hasOwnProperty(key)) {
+            const value = prop[key as keyof Property];
+            if (value === '' || value === undefined) {
+               (prop as any)[key] = null;
+            }
         }
       }
+       // Asegura que los valores numéricos que pueden ser 0 se manejen correctamente
+       const numericKeys: (keyof Property)[] = ['habitaciones', 'alcobas', 'banos', 'banos_medios', 'estacionamientos', 'm2_terreno', 'm2_construccion', 'm2_privada'];
+       for (const key of numericKeys) {
+           if (prop[key] === '' || prop[key] === undefined || prop[key] === null) {
+              (prop as any)[key] = 0; // O mantenlo como null si tu DB lo prefiere
+           }
+       }
+
        // Ensure boolean is handled correctly
       if (prop.convenio_validado === undefined || prop.convenio_validado === null) {
           prop.convenio_validado = false;
@@ -243,7 +284,7 @@ export class AdminComponent implements OnInit {
         // Determine if it should be principal: only if it's the first file AND
         // either we are NOT editing, OR we ARE editing and there are no existing images.
         const noExistingImages = !this.editingImages || this.editingImages.length === 0;
-        const esPrincipal = index === 0 && noExistingImages;
+        const esPrincipal = index === 0 && (this.newProperty || noExistingImages); // Check if adding new or if no existing images
 
         // Add the upload observable to the array
         uploadObservables.push(
@@ -280,7 +321,7 @@ export class AdminComponent implements OnInit {
             this.editingImages = [...this.editingProperty.imagenes]; // Update editingImages too
          }
          // Optionally reload all data if not editing or to ensure consistency
-         // this.loadData();
+         this.loadData(); // Recargar para asegurar consistencia
        },
        error: (err) => {
          this.errorMessage = `Error al eliminar imagen: ${err.error?.error || err.message}`;
@@ -301,7 +342,7 @@ export class AdminComponent implements OnInit {
              this.editingImages = [...this.editingProperty.imagenes]; // Update editingImages
          }
           // Optionally reload all data
-         // this.loadData();
+         this.loadData(); // Recargar para asegurar consistencia
        },
        error: (err) => {
           this.errorMessage = `Error al establecer imagen principal: ${err.error?.error || err.message}`;

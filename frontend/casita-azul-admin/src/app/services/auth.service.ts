@@ -4,8 +4,7 @@ import { Observable, BehaviorSubject, map } from 'rxjs'; // Import map
 import { tap } from 'rxjs/operators';
 import { isPlatformBrowser } from '@angular/common';
 
-// Add 'role' to the user object interface (if you define one explicitly)
-// Or just expect it dynamically like below
+// Add 'role' to the user object interface
 interface User {
   id: string;
   email: string;
@@ -40,8 +39,7 @@ export class AuthService {
   }
 
   register(email: string, password: string): Observable<any> {
-    // Note: Registration doesn't usually return the role immediately.
-    // Role is typically assigned later or fetched upon first login/user fetch.
+    // Role is assigned by backend logic (default 'user' or admin-created)
     return this.http.post(`${this.apiUrl}/register`, { email, password });
   }
 
@@ -51,7 +49,12 @@ export class AuthService {
       password
     }).pipe(
       tap(response => {
-        // Fetch full user details including role after successful login
+        // Store tokens immediately
+        if (isPlatformBrowser(this.platformId)) {
+          localStorage.setItem('access_token', response.access_token);
+          localStorage.setItem('refresh_token', response.refresh_token);
+        }
+        // Fetch full user details including role *after* storing tokens
         this.fetchAndStoreUser(response.access_token);
       })
     );
@@ -62,16 +65,19 @@ export class AuthService {
     const headers = new HttpHeaders({
       'Authorization': `Bearer ${token}`
     });
-    this.http.get<User>(`${this.apiUrl}/user`, { headers }).subscribe(user => {
-       if (isPlatformBrowser(this.platformId)) {
-          // Store token from login/refresh response, and full user from /user endpoint
-          const accessToken = localStorage.getItem('access_token') || token; // Prefer existing token if available
-          const refreshToken = localStorage.getItem('refresh_token'); // Get refresh token if stored
-          localStorage.setItem('access_token', accessToken);
-          if (refreshToken) localStorage.setItem('refresh_token', refreshToken); // Keep refresh token
+
+    // Don't return observable, just execute
+    this.http.get<User>(`${this.apiUrl}/user`, { headers }).subscribe({
+      next: (user) => {
+        if (isPlatformBrowser(this.platformId)) {
           localStorage.setItem('user', JSON.stringify(user)); // Store full user object with role
-       }
-       this.currentUserSubject.next(user);
+        }
+        this.currentUserSubject.next(user);
+      },
+      error: (err) => {
+        console.error("Failed to fetch user data", err);
+        this.clearStorage(); // Log out if user fetch fails
+      }
     });
   }
 
@@ -117,23 +123,25 @@ export class AuthService {
     return this.http.post<{access_token: string, refresh_token: string}>(`${this.apiUrl}/refresh`, {
       refresh_token: refreshToken
     }).pipe(
-      tap((response) => {
-        if (isPlatformBrowser(this.platformId)) {
-          localStorage.setItem('access_token', response.access_token);
-          // Update refresh token if backend sends a new one
-          if (response.refresh_token) {
-             localStorage.setItem('refresh_token', response.refresh_token);
+      tap(
+        (response) => {
+          if (isPlatformBrowser(this.platformId)) {
+            localStorage.setItem('access_token', response.access_token);
+            // Update refresh token if backend sends a new one
+            if (response.refresh_token) {
+               localStorage.setItem('refresh_token', response.refresh_token);
+            }
+            // Re-fetch user details with the new token to update role/info
+            this.fetchAndStoreUser(response.access_token);
           }
-          // Re-fetch user details with the new token to update role/info
-          this.fetchAndStoreUser(response.access_token);
+        },
+        (error) => {
+          // If refresh fails (e.g., token expired/invalid), log out the user
+          console.error("Refresh token failed:", error);
+          this.clearStorage();
+          // Optionally redirect to login here via Router if needed globally
         }
-      },
-      (error) => {
-        // If refresh fails (e.g., token expired/invalid), log out the user
-        console.error("Refresh token failed:", error);
-        this.clearStorage();
-        // Optionally redirect to login here via Router if needed globally
-      })
+      )
     );
   }
 
@@ -157,13 +165,17 @@ export class AuthService {
         try {
           const user = JSON.parse(userString) as User;
           this.currentUserSubject.next(user);
-          // Optional: Verify token is still valid by calling /user endpoint again?
-          // this.fetchAndStoreUser(token); // Could cause infinite loop if refresh fails
+          // Optional: Verify token is still valid by calling /user endpoint again
+          this.fetchAndStoreUser(token);
         } catch (e) {
             console.error("Failed to parse user from storage", e);
             this.clearStorage();
         }
-      } else {
+      } else if (token) {
+        // Has token but no user object, fetch it
+        this.fetchAndStoreUser(token);
+      }
+      else {
           this.clearStorage(); // Ensure clean state if token or user is missing
       }
     }

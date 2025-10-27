@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { CommonModule, TitleCasePipe } from '@angular/common'; // Import TitleCasePipe
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms'; // Import necessary modules
 import { AdminService, AdminUser } from '../../services/admin.service';
 import { RouterLink } from '@angular/router'; // Import RouterLink
@@ -7,7 +7,7 @@ import { RouterLink } from '@angular/router'; // Import RouterLink
 @Component({
   selector: 'app-manage-users',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterLink], // Add necessary imports
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterLink, TitleCasePipe], // Add necessary imports
   templateUrl: './manage-users.component.html',
   styleUrls: ['./manage-users.component.css']
 })
@@ -45,10 +45,9 @@ export class ManageUsersComponent implements OnInit {
     this.successMessage = '';
     this.adminService.getUsers().subscribe({
       next: (users) => {
-        // Attempt to fetch roles for each user if not included
-        // This might require a backend change or separate profile fetch
-        // For now, assume the role might be missing initially
-        this.users = users.map(u => ({ ...u, role: u.role || 'user' })); // Basic role default
+        // Asumimos que el rol vendrá del backend (lo ajustamos en app.py)
+        // Si no, necesitaremos buscar el perfil para cada usuario.
+        this.users = users;
         this.isLoading = false;
       },
       error: (err) => {
@@ -94,9 +93,8 @@ export class ManageUsersComponent implements OnInit {
 
   startEditRole(user: AdminUser): void {
     this.editingUserId = user.id;
-    // Get current role accurately - might need adjustment if roles aren't fetched initially
-    const currentUser = this.users.find(u => u.id === user.id);
-    this.editingUserRole = currentUser?.role || 'user';
+    // El rol debería venir del backend
+    this.editingUserRole = user.role || 'user';
     this.errorMessage = '';
     this.successMessage = '';
   }

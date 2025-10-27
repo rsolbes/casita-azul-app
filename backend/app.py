@@ -15,32 +15,35 @@ CORS(app, resources={r"/api/*": {"origins": "*"}})
 
 @app.after_request
 def after_request(response):
+    # Asegúrate de que tu URL de frontend sea la correcta aquí
     response.headers.add('Access-Control-Allow-Origin', 'http://localhost:4200')
     response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
     response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
     response.headers.add('Access-Control-Allow-Credentials', 'true')
     return response
 
-# Configuración de Supabase Storage
-SUPABASE_URL = "https://izozjytmktbuhpttczid.supabase.co"
-SUPABASE_KEY = os.getenv("SUPABASE_ANON_KEY")
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+# Configuración de Supabase
+SUPABASE_URL = "https://izozjytmktbuhpttczid.supabase.co" # Reemplaza si es diferente
+SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY")
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
 
 # --- Add Admin Client ---
-SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY") # Add this to your .env
+SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY") # Asegúrate de tener esto en .env
 supabase_admin: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 
 
-BUCKET_NAME = "imagenes casas"
+# Configuración de Storage
+BUCKET_NAME = "imagenes casas" # Asegúrate que este sea el nombre correcto de tu bucket
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+# Conexión a Base de Datos (directa para operaciones específicas)
 def get_db_connection():
     conn = psycopg2.connect(
         user=os.getenv("DB_USER", "postgres.izozjytmktbuhpttczid"),
-        password=os.getenv("PASSWORD", "bddingsoftware123"),
+        password=os.getenv("PASSWORD", "bddingsoftware123"), # Asegúrate que esto esté en tu .env real
         host=os.getenv("HOST", "aws-1-us-east-2.pooler.supabase.com"),
         port=os.getenv("PORT", "6543"),
         dbname=os.getenv("DBNAME", "postgres"),
@@ -48,8 +51,9 @@ def get_db_connection():
     )
     return conn
 
-# --- Add Helper Functions for Admin Checks ---
+# --- Funciones Auxiliares para Roles de Admin ---
 def get_user_id_from_token(request):
+    """Extrae el user ID del token de autorización."""
     auth_header = request.headers.get('Authorization')
     if not auth_header or not auth_header.startswith('Bearer '):
         raise Exception("No token provided")
@@ -824,7 +828,18 @@ def admin_update_user_role(user_id):
             conn.commit()
             cursor.close()
             if updated_rows == 0:
-                 return jsonify({"error": f"User profile for {user_id} not found"}), 404
+                 # Check if profile exists, if not, create it
+                 cursor = conn.cursor()
+                 cursor.execute("SELECT 1 FROM public.profiles WHERE id = %s", (user_id,))
+                 if not cursor.fetchone():
+                     print(f"No profile found for {user_id}, creating one.")
+                     cursor.execute("INSERT INTO public.profiles (id, role) VALUES (%s, %s)", (user_id, new_role))
+                     conn.commit()
+                     cursor.close()
+                     return jsonify({"status": "success", "message": f"User {user_id} role created and set to {new_role}"}), 201
+                 else:
+                    cursor.close()
+                    return jsonify({"error": f"User profile for {user_id} not found, but exists?"}), 404 # Should not happen
             return jsonify({"status": "success", "message": f"User {user_id} role updated to {new_role}"}), 200
         except Exception as db_error:
              print(f"Error updating profile role for user {user_id}: {db_error}")

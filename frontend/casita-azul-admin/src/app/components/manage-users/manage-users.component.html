@@ -24,8 +24,7 @@
     </div>
   }
 
-  @if (!isLoading && !errorMessage) {
-    <div class="actions-bar">
+  @if (!isLoading) { <div class="actions-bar">
         <button class="btn-primary" (click)="toggleAddForm()">
           {{ showAddForm ? '➖ Ocultar Formulario' : '➕ Agregar Usuario' }}
         </button>
@@ -91,7 +90,7 @@
                       }
                     </select>
                   } @else {
-                    <span class="role-badge role-{{user.role}}">{{ user.role | titlecase }}</span>
+                    <span class="role-badge role-{{user.role}}">{{ (user.role || 'user') | titlecase }}</span>
                   }
                 </td>
                 <td class="actions-cell">
@@ -100,7 +99,7 @@
                     <button class="btn-cancel" (click)="cancelEditRole()">❌ Cancelar</button>
                   } @else {
                     <button class="btn-edit" (click)="startEditRole(user)">✏️ Editar Rol</button>
-                    <button class="btn-delete" (click)="deleteUser(user.id, user.email)">🗑️ Eliminar</button>
+                    <button class="btn-delete" (click)="deleteUser(user.id, user.email || 'usuario')">🗑️ Eliminar</button>
                   }
                 </td>
               </tr>

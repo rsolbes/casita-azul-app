@@ -61,6 +61,90 @@
   color: #667eea;
 }
 
+/* Estilos de la tabla (del archivo anterior) */
+.table-container {
+  overflow-x: auto;
+  margin-bottom: 30px;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+th, td {
+  border: 1px solid #ddd;
+  padding: 12px;
+  text-align: left;
+  vertical-align: top;
+  font-size: 14px;
+}
+th {
+  background-color: #f8f9fa;
+  font-weight: 600;
+}
+tr:nth-child(even) {
+  background-color: #fdfdfd;
+}
+
+/* Estilos de formulario (del archivo anterior) */
+.form-section {
+  background: #fff;
+  padding: 25px;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+  margin-top: 30px;
+}
+.form-section h3 {
+  margin-top: 0;
+  margin-bottom: 25px;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 15px;
+}
+.property-form .form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 25px;
+}
+.property-form fieldset {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+.property-form legend {
+  padding: 0 10px;
+  font-weight: 600;
+  color: #333;
+}
+.property-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  color: #555;
+}
+.property-form input[type="text"],
+.property-form input[type="number"],
+.property-form textarea,
+.property-form select {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 14px;
+  box-sizing: border-box; /* Importante para padding */
+}
+.property-form textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+.form-actions {
+  margin-top: 25px;
+  display: flex;
+  gap: 10px;
+}
+
 /* Estilos para la celda de imagen en la tabla */
 .image-cell {
   padding: 8px !important;
@@ -284,4 +368,3 @@
     font-size: 9px;
   }
 }
-

@@ -4,7 +4,7 @@ import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/
 import { routes } from './app.routes';
 import { provideClientHydration } from '@angular/platform-browser';
 
-import { authInterceptor } from './interceptors/auth-interceptor'; // CORRECTED PATH: Check if './interceptors/' exists
+import { authInterceptor } from './interceptors/auth-interceptor'; // Usa el nombre de archivo con guión
 
 export const appConfig: ApplicationConfig = {
   providers: [
