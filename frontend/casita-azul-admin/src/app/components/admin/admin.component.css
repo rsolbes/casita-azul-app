@@ -611,3 +611,61 @@ button:disabled { cursor: not-allowed; opacity: 0.7; }
 .btn-remove-file { background: none; border: none; color: #dc3545; font-size: 1.2em; padding: 0 5px; }
 .file-upload-label { background-color: #0d6efd; color: white; /* Estilo consistente */ }
 .file-upload-label:hover { background-color: #0b5ed7; }
+/* === ESTILOS PARA LA BARRA DE BÚSQUEDA === */
+
+.search-box {
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 20px; /* Bordes redondeados para el contenedor */
+  padding-left: 5px;
+  transition: background 0.3s ease;
+}
+
+.search-box.open {
+  background: rgba(255, 255, 255, 0.25); /* Un fondo más opaco al abrir */
+  box-shadow: 0 0 5px rgba(0,0,0,0.1);
+}
+
+.search-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px 10px;
+  font-size: 18px; /* Ajusta el tamaño del emoji/ícono */
+  color: white;
+  display: flex; /* Para centrar bien el ícono */
+  align-items: center;
+  justify-content: center;
+}
+
+.search-input {
+  /* Estado colapsado (oculto) */
+  width: 0;
+  border: none;
+  background: none;
+  padding: 0;
+  opacity: 0;
+  visibility: hidden; /* Oculta completamente */
+
+  /* Transición para la animación */
+  transition: all 0.3s ease-in-out;
+
+  /* Estilos del texto */
+  font-size: 14px;
+  color: white;
+  outline: none; /* Quita el borde azul de Chrome al hacer foco */
+}
+
+/* Estilo para el placeholder (texto de ejemplo) */
+.search-input::placeholder {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* Estado expandido (abierto) */
+.search-box.open .search-input {
+  width: 200px; /* Ancho del campo de texto al expandirse */
+  padding: 8px 15px 8px 5px; /* Padding (top, right, bottom, left) */
+  opacity: 1;
+  visibility: visible; /* Lo hace visible */
+}

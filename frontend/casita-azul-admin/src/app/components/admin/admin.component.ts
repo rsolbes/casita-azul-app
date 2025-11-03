@@ -23,6 +23,10 @@ export class AdminComponent implements OnInit {
   editingProperty: Property | null = null;
   isNewMode = false; // Flag for new property
 
+  // Búsqueda UI
+  showSearch = false;
+  searchQuery = '';
+
   catalogos: CatalogosApiResponse = {};
   newProperty: Property = this.createEmptyProperty();
 
@@ -133,6 +137,29 @@ export class AdminComponent implements OnInit {
          }
       }
     });
+  }
+
+  // Devuelve propiedades filtradas según searchQuery (si está vacío devuelve todas)
+  get displayedProperties(): Property[] {
+    const q = (this.searchQuery || '').trim().toLowerCase();
+    if (!q) return this.properties;
+    return this.properties.filter(p => {
+      const titulo = (p.titulo || '').toString().toLowerCase();
+      const descripcion = (p.descripcion || '').toString().toLowerCase();
+      const direccion = (p.direccion || '').toString().toLowerCase();
+      return titulo.includes(q) || descripcion.includes(q) || direccion.includes(q);
+    });
+  }
+
+  toggleSearch() {
+    this.showSearch = !this.showSearch;
+    if (!this.showSearch) {
+      this.searchQuery = '';
+    }
+  }
+
+  onSearch(_q: string) {
+    // El filtrado ocurre por el getter displayedProperties; este método existe para el binding (ngModelChange)
   }
 
   editProperty(prop: Property) {
