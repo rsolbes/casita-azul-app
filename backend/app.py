@@ -11,16 +11,14 @@ from dotenv import load_dotenv
 load_dotenv()
 
 app = Flask(__name__)
-CORS(app, resources={r"/api/*": {"origins": "*"}})
+origins = [
+    "http://localhost:4200",  # Tu app de admin
+    "http://localhost:50687", # Tu otra app
+    "http://127.0.0.1:4200",   # A veces es necesario agregar 127.0.0.1 también
+    "http://127.0.0.1:50687"
+]
+CORS(app, resources={r"/api/*": {"origins": origins}}, supports_credentials=True)
 
-@app.after_request
-def after_request(response):
-    # Asegúrate de que tu URL de frontend sea la correcta aquí
-    response.headers.add('Access-Control-Allow-Origin', 'http://localhost:4200')
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
-    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
-    response.headers.add('Access-Control-Allow-Credentials', 'true')
-    return response
 
 # Configuración de Supabase
 SUPABASE_URL = "https://izozjytmktbuhpttczid.supabase.co" # Reemplaza si es diferente

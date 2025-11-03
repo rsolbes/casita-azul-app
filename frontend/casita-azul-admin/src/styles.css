@@ -1,1 +1,6 @@
-/* You can add global styles to this file, and also import other style files */
+body {
+  background-color: rgb(154, 209, 242);
+  margin: 0; /* Asegura que no haya márgenes blancos */
+  padding: 0;
+  font-family: Roboto, Helvetica, Arial, sans-serif; /* Opcional: define una fuente global */
+}
