@@ -696,12 +696,42 @@ def admin_list_users():
         if not is_admin(requesting_user_id):
             return jsonify({"error": "Admin privileges required"}), 403
 
-        # Use the admin client
-        response = supabase_admin.auth.admin.list_users()
-        # Supabase Python client might structure this differently, adjust as needed
-        # Assuming response object has a 'users' attribute which is a list
-        users_list = [user.dict() for user in response.users] if hasattr(response, 'users') else []
-        return jsonify(users_list), 200
+        conn = None
+        try:
+            conn = get_db_connection()
+            cursor = conn.cursor(cursor_factory=RealDictCursor)
+            
+            # Esta consulta une auth.users con public.profiles
+            query = """
+                SELECT 
+                    u.id, 
+                    u.email, 
+                    u.created_at,
+                    COALESCE(p.role, 'user') as role 
+                FROM auth.users u
+                LEFT JOIN public.profiles p ON u.id = p.id
+                ORDER BY u.created_at DESC;
+            """
+            cursor.execute(query)
+            users_list = cursor.fetchall()
+            cursor.close()
+            
+            # Convertir UUIDs y datetimes a string para jsonify
+            for user in users_list:
+                 if 'id' in user and hasattr(user['id'], 'hex'):
+                     user['id'] = str(user['id'])
+                 if 'created_at' in user and hasattr(user['created_at'], 'isoformat'):
+                     user['created_at'] = user['created_at'].isoformat()
+
+            return jsonify(users_list), 200
+        
+        except Exception as db_e:
+            print(f"Error listing users from DB: {db_e}")
+            if conn: conn.rollback()
+            return jsonify({"error": f"Database error: {str(db_e)}"}), 500
+        finally:
+            if conn:
+                conn.close()
     except Exception as e:
         print(f"Error listing users: {e}")
         # Differentiate between auth errors (401/403) and server errors (500)

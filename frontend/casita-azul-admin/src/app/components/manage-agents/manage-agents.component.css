@@ -5,9 +5,9 @@
   padding: 20px;
   max-width: 1200px;
   margin: 20px auto;
-  background-color: #f9f9f9;
+  background-color: #8ebcfc;
   border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 10px rgba(246, 158, 246, 0.1);
 }
 
 .admin-header {
@@ -15,8 +15,8 @@
   justify-content: space-between;
   align-items: center;
   padding: 15px 25px;
-  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%); /* Blue gradient */
-  color: white;
+  background: linear-gradient(135deg, #8937fd 0%, #0056b3 100%); /* Blue gradient */
+  color: rgb(189, 255, 250);
   border-radius: 8px;
   margin-bottom: 25px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
@@ -25,11 +25,11 @@
 .admin-header h1 { margin: 0; font-size: 24px; }
 .user-info { display: flex; align-items: center; gap: 10px; }
 .btn-admin-link {
-  padding: 8px 15px; background: rgba(255, 255, 255, 0.15); color: white;
-  border: 1px solid rgba(255, 255, 255, 0.5); border-radius: 6px; cursor: pointer;
+  padding: 8px 15px; background: rgba(255, 255, 255, 0.15); color: rgb(155, 247, 236);
+  border: 1px solid rgba(43, 255, 0, 0.5); border-radius: 6px; cursor: pointer;
   font-weight: 500; font-size: 13px; text-decoration: none; transition: all 0.2s;
 }
-.btn-admin-link:hover { background: rgba(255, 255, 255, 0.3); border-color: white; }
+.btn-admin-link:hover { background: rgba(255, 255, 255, 0.3); border-color: rgb(255, 0, 0); }
 
 .loading-message { text-align: center; padding: 20px; color: #555; }
 .alert { padding: 12px 16px; border-radius: 8px; margin-bottom: 20px; font-size: 14px; display: flex; justify-content: space-between; align-items: center; }
