@@ -302,10 +302,15 @@ def get_catalogos():
 def get_properties():
     conn = None
     try:
-        conn = get_db_connection()
-        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        # --- INICIO DE CAMBIOS ---
+        # 1. Obtener parámetros de filtro de la URL
+        tipo_negocio_id = request.args.get('tipo_negocio_id')
+        
+        # Cambiamos 'ne' (Not Equal) por 'not_in' (No incluir)
+        # Esperará un string de IDs separados por coma, ej: "2,3,4"
+        estado_publicacion_id_not_in_str = request.args.get('estado_publicacion_id__not_in') 
 
-        # Obtener propiedades con sus imágenes
+        # 2. Construir la consulta base (sin cambios)
         query = """
             SELECT p.*,
                    json_agg(
@@ -319,11 +324,48 @@ def get_properties():
                    ) FILTER (WHERE pi.id IS NOT NULL) as imagenes
             FROM propiedades p
             LEFT JOIN propiedades_imagenes pi ON p.id = pi.propiedad_id
-            WHERE p.deleted_at IS NULL
+        """
+
+        # 3. Preparar filtros y parámetros
+        filters = ["p.deleted_at IS NULL"] # Siempre excluir borrados lógicos
+        params = []
+
+        # Añadir filtro por tipo_negocio_id si se proporciona
+        if tipo_negocio_id:
+            filters.append("p.tipo_negocio_id = %s")
+            params.append(tipo_negocio_id)
+
+        # Añadir filtro para excluir una LISTA de estados de publicación
+        if estado_publicacion_id_not_in_str:
+            try:
+                # Convertir el string "2,3,4" en una tupla de enteros (2, 3, 4)
+                excluded_ids = tuple(int(id) for id in estado_publicacion_id_not_in_str.split(','))
+                if excluded_ids:
+                    # Usar el operador 'NOT IN' de SQL
+                    # '%s' aquí se expandirá a la tupla de IDs
+                    filters.append("p.estado_publicacion_id NOT IN %s")
+                    params.append(excluded_ids)
+            except ValueError:
+                # Ignorar el filtro si no es válido (ej. "a,b,c")
+                print(f"Filtro 'estado_publicacion_id__not_in' inválido: {estado_publicacion_id_not_in_str}")
+
+
+        # 4. Añadir filtros a la consulta
+        if filters:
+            query += " WHERE " + " AND ".join(filters)
+
+        # 5. Añadir GROUP BY y ORDER BY (sin cambios)
+        query += """
             GROUP BY p.id
             ORDER BY p.id DESC;
         """
-        cursor.execute(query)
+        # --- FIN DE CAMBIOS ---
+
+        conn = get_db_connection()
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+
+        # Ejecutar la consulta con los parámetros (importante pasar params como tupla)
+        cursor.execute(query, tuple(params))
         propiedades = cursor.fetchall()
         cursor.close()
         return jsonify({"properties": propiedades})
