@@ -1,58 +1,147 @@
 <div class="login-container">
   <div class="login-card">
-    <div class="logo-section">
-      <h1>Iniciar Sesión</h1>
-      <p>Bienvenido de nuevo</p>
+    <!-- Header con Logo -->
+    <div class="card-header">
+      <div class="logo-section">
+        <div class="logo-container">
+          <img src="logo.png" alt="Casita Azul Logo">
+
+        </div>
+        <h1>{{ isLoginMode ? 'Iniciar Sesión' : 'Registro' }}</h1>
+        <p>{{ isLoginMode ? 'Bienvenido de nuevo' : 'Crear nueva cuenta' }}</p>
+      </div>
     </div>
 
-    @if (successMessage) {
-      <div class="alert alert-success">
-        {{ successMessage }}
-      </div>
-    }
-    @if (errorMessage) {
-      <div class="alert alert-error">
-        {{ errorMessage }}
-      </div>
-    }
+    <!-- Cuerpo del formulario -->
+    <div class="card-body">
+      @if (successMessage) {
+        <div class="alert alert-success">
+          {{ successMessage }}
+        </div>
+      }
+      @if (errorMessage) {
+        <div class="alert alert-error">
+          {{ errorMessage }}
+        </div>
+      }
 
-    <form [formGroup]="loginForm" (ngSubmit)="onLogin()">
-      <div class="form-group">
-        <label for="login-email">Email</label>
-        <input
-          type="email"
-          id="login-email"
-          formControlName="email"
-          placeholder="tu@email.com"
-          [class.invalid]="loginForm.get('email')?.invalid && loginForm.get('email')?.touched"
-        />
-        @if (loginForm.get('email')?.invalid && loginForm.get('email')?.touched) {
-          <span class="error-text">Email inválido</span>
-        }
-      </div>
+      <!-- TU FORMULARIO ORIGINAL DE LOGIN -->
+      @if (isLoginMode) {
+        <form [formGroup]="loginForm" (ngSubmit)="onLogin()">
+          <div class="form-group">
+            <label for="login-email">Email</label>
+            <div class="input-wrapper">
+              <span class="input-icon">📧</span>
+              <input
+                type="email"
+                id="login-email"
+                formControlName="email"
+                placeholder="tu@email.com"
+                [class.invalid]="loginForm.get('email')?.invalid && loginForm.get('email')?.touched"
+              />
+            </div>
+            @if (loginForm.get('email')?.invalid && loginForm.get('email')?.touched) {
+              <span class="error-text">Email inválido</span>
+            }
+          </div>
 
-      <div class="form-group">
-        <label for="login-password">Contraseña</label>
-        <input
-          type="password"
-          id="login-password"
-          formControlName="password"
-          placeholder="••••••••"
-          [class.invalid]="loginForm.get('password')?.invalid && loginForm.get('password')?.touched"
-        />
-         @if (loginForm.get('password')?.invalid && loginForm.get('password')?.touched) {
-          <span class="error-text">Mínimo 6 caracteres</span>
-        }
-      </div>
+          <div class="form-group">
+            <label for="login-password">Contraseña</label>
+            <div class="input-wrapper">
+              <span class="input-icon">🔒</span>
+              <input
+                type="password"
+                id="login-password"
+                formControlName="password"
+                placeholder="••••••••"
+                [class.invalid]="loginForm.get('password')?.invalid && loginForm.get('password')?.touched"
+              />
+            </div>
+            @if (loginForm.get('password')?.invalid && loginForm.get('password')?.touched) {
+              <span class="error-text">Mínimo 6 caracteres</span>
+            }
+          </div>
 
-      <button
-        type="submit"
-        class="btn-primary"
-        [disabled]="loading || loginForm.invalid"
-      >
-        {{ loading ? 'Cargando...' : 'Iniciar Sesión' }}
-      </button>
-    </form>
+          <button
+            type="submit"
+            class="btn-primary"
+            [disabled]="loading || loginForm.invalid"
+          >
+            {{ loading ? 'Cargando...' : 'Iniciar Sesión' }}
+          </button>
+        </form>
+      }
 
+      <!-- TU FORMULARIO ORIGINAL DE REGISTRO -->
+      @if (!isLoginMode) {
+        <form [formGroup]="registerForm" (ngSubmit)="onRegister()">
+          <div class="form-group">
+            <label for="register-email">Email</label>
+            <div class="input-wrapper">
+              <span class="input-icon">📧</span>
+              <input
+                type="email"
+                id="register-email"
+                formControlName="email"
+                placeholder="tu@email.com"
+                [class.invalid]="registerForm.get('email')?.invalid && registerForm.get('email')?.touched"
+              />
+            </div>
+            @if (registerForm.get('email')?.invalid && registerForm.get('email')?.touched) {
+              <span class="error-text">Email inválido</span>
+            }
+          </div>
+
+          <div class="form-group">
+            <label for="register-password">Contraseña</label>
+            <div class="input-wrapper">
+              <span class="input-icon">🔒</span>
+              <input
+                type="password"
+                id="register-password"
+                formControlName="password"
+                placeholder="••••••••"
+                [class.invalid]="registerForm.get('password')?.invalid && registerForm.get('password')?.touched"
+              />
+            </div>
+            @if (registerForm.get('password')?.invalid && registerForm.get('password')?.touched) {
+              <span class="error-text">Mínimo 6 caracteres</span>
+            }
+          </div>
+
+          <div class="form-group">
+            <label for="confirm-password">Confirmar Contraseña</label>
+            <div class="input-wrapper">
+              <span class="input-icon">🔒</span>
+              <input
+                type="password"
+                id="confirm-password"
+                formControlName="confirmPassword"
+                placeholder="••••••••"
+                [class.invalid]="registerForm.get('confirmPassword')?.invalid && registerForm.get('confirmPassword')?.touched"
+              />
+            </div>
+            @if (registerForm.get('confirmPassword')?.hasError('mismatch') && registerForm.get('confirmPassword')?.touched) {
+              <span class="error-text">Las contraseñas no coinciden</span>
+            }
+          </div>
+
+          <button
+            type="submit"
+            class="btn-primary"
+            [disabled]="loading || registerForm.invalid"
+          >
+            {{ loading ? 'Cargando...' : 'Registrarse' }}
+          </button>
+        </form>
+      }
+
+      <!-- TU TOGGLE ORIGINAL -->
+       
+
+    <!-- Footer -->
+    <div class="card-footer">
+      <p>© 2025 Casita Azul. Todos los derechos reservados.</p>
     </div>
+  </div>
 </div>

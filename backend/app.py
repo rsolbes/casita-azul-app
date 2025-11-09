@@ -24,13 +24,24 @@ def after_request(response):
 
 # Configuración de Supabase
 SUPABASE_URL = "https://izozjytmktbuhpttczid.supabase.co" # Reemplaza si es diferente
+SUPABASE_URL = os.getenv("SUPABASE_URL", "https://izozjytmktbuhpttczid.supabase.co")
 SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY")
+
+if not SUPABASE_ANON_KEY:
+    raise ValueError("SUPABASE_ANON_KEY no está configurada")
+
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
 
-# --- Add Admin Client ---
-SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY") # Asegúrate de tener esto en .env
+# Solo crea admin client si existe la key
+SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
+supabase_admin = None
+if SUPABASE_SERVICE_KEY:
+    try:
+        supabase_admin = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+        print("✅ Admin client configurado")
+    except Exception as e:
+        print(f"⚠️  No se pudo configurar admin client: {e}") 
 supabase_admin: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
-
 
 # Configuración de Storage
 BUCKET_NAME = "imagenes casas" # Asegúrate que este sea el nombre correcto de tu bucket
