@@ -11,16 +11,14 @@ from dotenv import load_dotenv
 load_dotenv()
 
 app = Flask(__name__)
-CORS(app, resources={r"/api/*": {"origins": "*"}})
+origins = [
+    "http://localhost:4200",  # Tu app de admin
+    "http://localhost:50687", # Tu otra app
+    "http://127.0.0.1:4200",   # A veces es necesario agregar 127.0.0.1 también
+    "http://127.0.0.1:50687"
+]
+CORS(app, resources={r"/api/*": {"origins": origins}}, supports_credentials=True)
 
-@app.after_request
-def after_request(response):
-    # Asegúrate de que tu URL de frontend sea la correcta aquí
-    response.headers.add('Access-Control-Allow-Origin', 'http://localhost:4200')
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
-    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
-    response.headers.add('Access-Control-Allow-Credentials', 'true')
-    return response
 
 # Configuración de Supabase
 SUPABASE_URL = "https://izozjytmktbuhpttczid.supabase.co" # Reemplaza si es diferente
@@ -315,10 +313,15 @@ def get_catalogos():
 def get_properties():
     conn = None
     try:
-        conn = get_db_connection()
-        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        # --- INICIO DE CAMBIOS ---
+        # 1. Obtener parámetros de filtro de la URL
+        tipo_negocio_id = request.args.get('tipo_negocio_id')
+        
+        # Cambiamos 'ne' (Not Equal) por 'not_in' (No incluir)
+        # Esperará un string de IDs separados por coma, ej: "2,3,4"
+        estado_publicacion_id_not_in_str = request.args.get('estado_publicacion_id__not_in') 
 
-        # Obtener propiedades con sus imágenes
+        # 2. Construir la consulta base (sin cambios)
         query = """
             SELECT p.*,
                    json_agg(
@@ -332,11 +335,48 @@ def get_properties():
                    ) FILTER (WHERE pi.id IS NOT NULL) as imagenes
             FROM propiedades p
             LEFT JOIN propiedades_imagenes pi ON p.id = pi.propiedad_id
-            WHERE p.deleted_at IS NULL
+        """
+
+        # 3. Preparar filtros y parámetros
+        filters = ["p.deleted_at IS NULL"] # Siempre excluir borrados lógicos
+        params = []
+
+        # Añadir filtro por tipo_negocio_id si se proporciona
+        if tipo_negocio_id:
+            filters.append("p.tipo_negocio_id = %s")
+            params.append(tipo_negocio_id)
+
+        # Añadir filtro para excluir una LISTA de estados de publicación
+        if estado_publicacion_id_not_in_str:
+            try:
+                # Convertir el string "2,3,4" en una tupla de enteros (2, 3, 4)
+                excluded_ids = tuple(int(id) for id in estado_publicacion_id_not_in_str.split(','))
+                if excluded_ids:
+                    # Usar el operador 'NOT IN' de SQL
+                    # '%s' aquí se expandirá a la tupla de IDs
+                    filters.append("p.estado_publicacion_id NOT IN %s")
+                    params.append(excluded_ids)
+            except ValueError:
+                # Ignorar el filtro si no es válido (ej. "a,b,c")
+                print(f"Filtro 'estado_publicacion_id__not_in' inválido: {estado_publicacion_id_not_in_str}")
+
+
+        # 4. Añadir filtros a la consulta
+        if filters:
+            query += " WHERE " + " AND ".join(filters)
+
+        # 5. Añadir GROUP BY y ORDER BY (sin cambios)
+        query += """
             GROUP BY p.id
             ORDER BY p.id DESC;
         """
-        cursor.execute(query)
+        # --- FIN DE CAMBIOS ---
+
+        conn = get_db_connection()
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+
+        # Ejecutar la consulta con los parámetros (importante pasar params como tupla)
+        cursor.execute(query, tuple(params))
         propiedades = cursor.fetchall()
         cursor.close()
         return jsonify({"properties": propiedades})
@@ -707,12 +747,42 @@ def admin_list_users():
         if not is_admin(requesting_user_id):
             return jsonify({"error": "Admin privileges required"}), 403
 
-        # Use the admin client
-        response = supabase_admin.auth.admin.list_users()
-        # Supabase Python client might structure this differently, adjust as needed
-        # Assuming response object has a 'users' attribute which is a list
-        users_list = [user.dict() for user in response.users] if hasattr(response, 'users') else []
-        return jsonify(users_list), 200
+        conn = None
+        try:
+            conn = get_db_connection()
+            cursor = conn.cursor(cursor_factory=RealDictCursor)
+            
+            # Esta consulta une auth.users con public.profiles
+            query = """
+                SELECT 
+                    u.id, 
+                    u.email, 
+                    u.created_at,
+                    COALESCE(p.role, 'user') as role 
+                FROM auth.users u
+                LEFT JOIN public.profiles p ON u.id = p.id
+                ORDER BY u.created_at DESC;
+            """
+            cursor.execute(query)
+            users_list = cursor.fetchall()
+            cursor.close()
+            
+            # Convertir UUIDs y datetimes a string para jsonify
+            for user in users_list:
+                 if 'id' in user and hasattr(user['id'], 'hex'):
+                     user['id'] = str(user['id'])
+                 if 'created_at' in user and hasattr(user['created_at'], 'isoformat'):
+                     user['created_at'] = user['created_at'].isoformat()
+
+            return jsonify(users_list), 200
+        
+        except Exception as db_e:
+            print(f"Error listing users from DB: {db_e}")
+            if conn: conn.rollback()
+            return jsonify({"error": f"Database error: {str(db_e)}"}), 500
+        finally:
+            if conn:
+                conn.close()
     except Exception as e:
         print(f"Error listing users: {e}")
         # Differentiate between auth errors (401/403) and server errors (500)

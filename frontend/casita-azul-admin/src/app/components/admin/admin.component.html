@@ -2,6 +2,10 @@
   <header class="admin-header">
     <h1>🏡 {{ title }}</h1>
     <div class="user-info">
+      <div class="search-box" [class.open]="showSearch">
+        <button type="button" class="search-btn" (click)="toggleSearch()" aria-label="Buscar">🔍</button>
+        <input *ngIf="showSearch" type="text" class="search-input" [(ngModel)]="searchQuery" (ngModelChange)="onSearch($event)" placeholder="Buscar..." />
+      </div>
       @if (currentUser) {
         <span>👤 {{ currentUser.email }}</span>
         @if (isAdmin) {
@@ -39,7 +43,7 @@
     </div>
 
 
-    @if (properties.length > 0 && !editingProperty && !isNewMode) { <h2>Propiedades</h2>
+    @if (displayedProperties.length > 0 && !editingProperty && !isNewMode) { <h2>Propiedades</h2>
       <div class="table-container">
         <table>
           <thead>
@@ -56,7 +60,7 @@
             </tr>
           </thead>
           <tbody>
-            @for (prop of properties; track prop.id) {
+            @for (prop of displayedProperties; track prop.id) {
               <tr>
                 <td class="image-cell">
                   @if (getPrincipalImage(prop)) {

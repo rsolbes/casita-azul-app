@@ -65,6 +65,8 @@
 .table-container {
   overflow-x: auto;
   margin-bottom: 30px;
+  border-radius: 8px; /* Para que los bordes redondeados funcionen */
+  overflow: hidden; /* Para que los bordes redondeados funcionen */
 }
 table {
   width: 100%;
@@ -78,21 +80,31 @@ th, td {
   font-size: 14px;
 }
 th {
-  background-color: #f8f9fa;
+  background-color: #0d47a1; /* Azul oscuro */
+  color: white; /* Texto blanco */
   font-weight: 600;
+  border-bottom: 1px solid #0d47a1; /* Borde del mismo color */
+}
+tbody tr {
+  background-color: #e3f2fd; /* Celeste claro */
 }
 tr:nth-child(even) {
-  background-color: #fdfdfd;
+  background-color: #e3f2fd; /* Mismo celeste claro */
 }
+tbody tr:hover {
+  background-color: #bbdefb; /* Celeste un poco más oscuro */
+}
+
 
 /* Estilos de formulario (del archivo anterior) */
 .form-section {
-  background: #fff;
+  background: #e8f5e9; /* <-- FONDO VERDE CLARO */
   padding: 25px;
   border-radius: 12px;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
   margin-top: 30px;
 }
+
 .form-section h3 {
   margin-top: 0;
   margin-bottom: 25px;
@@ -337,7 +349,7 @@ tr:nth-child(even) {
 }
 
 .btn-remove-file:hover {
-  transform: scale(1.2);
+  transform: scale(1.1);
 }
 
 .info-text {
@@ -382,12 +394,40 @@ td small {
   display: block; /* Para que aparezca en una línea separada */
   margin-top: 4px;
 }
-/* Estilos para Secciones Colapsables del Formulario */
+
+/* --- CAMBIO: FONDOS DE COLORES PARA SECCIONES --- */
+.form-section .form-section-details:nth-of-type(1) {
+  background-color: #fffde7; /* 1. Amarillo claro (Datos Principales) */
+}
+.form-section .form-section-details:nth-of-type(2) {
+  background-color: #e3f2fd; /* 2. Celeste (Imágenes) */
+}
+.form-section .form-section-details:nth-of-type(3) {
+  background-color: #f3e5f5; /* 3. Lila claro (Valores) */
+}
+.form-section .form-section-details:nth-of-type(4) {
+  background-color: #e0f2f1; /* 4. Verde menta (Dimensiones) */
+}
+.form-section .form-section-details:nth-of-type(5) {
+  background-color: #fff3e0; /* 5. Naranja claro (Clasificación) */
+}
+.form-section .form-section-details:nth-of-type(6) {
+  background-color: #ffebee; /* 6. Rosa claro (Ubicación Catálogos) */
+}
+.form-section .form-section-details:nth-of-type(7) {
+  background-color: #f9fbe7; /* 7. Lima claro (Ubicación Coords) */
+}
+.form-section .form-section-details:nth-of-type(8) {
+  background-color: #e0f7fa; /* 8. Cian claro (Agentes) */
+}
+/* --------------------------------------------------- */
+
+
 .form-section-details {
   border: 1px solid #e0e0e0;
   border-radius: 8px;
   margin-bottom: 20px; /* Aumenta separación entre secciones */
-  background-color: #ffffff;
+  /* background-color: #ffffff; <-- Esta línea se sobreescribe por las de arriba */
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   transition: box-shadow 0.2s ease-in-out;
   overflow: hidden; /* Evita desbordes al colapsar/expandir */
@@ -472,12 +512,11 @@ td small {
 }
 
 /* Si usas .form-grid dentro de .fieldset-content, estos estilos ayudan */
-.form-grid .fieldset-content {
+.form-grid .fieldset-content, .fieldset-content.form-grid { /* Aplica si pones form-grid en details o en fieldset-content */
     display: grid;
-    /* Ajusta las columnas según necesites para cada sección */
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     gap: 20px;
-    padding: 25px;
+    padding: 25px; /* Asegura padding consistente */
 }
 
 /* Estilo específico para la sección de imágenes si es necesario */
@@ -512,6 +551,7 @@ th, td { vertical-align: middle; }
 
 
 /* Estilos para Secciones Colapsables del Formulario */
+/* .form-section-details:first-of-type (ya no se usa, se elimina) */
 .form-section-details { border: 1px solid #e0e0e0; border-radius: 8px; margin-bottom: 20px; background-color: #ffffff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05); transition: box-shadow 0.2s ease-in-out; overflow: hidden; }
 .form-section-details[open] { box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08); }
 .form-section-summary { padding: 15px 20px; cursor: pointer; background-color: #f8f9fa; list-style: none; display: flex; align-items: center; transition: background-color 0.2s ease; border-bottom: 1px solid transparent; }
@@ -571,3 +611,61 @@ button:disabled { cursor: not-allowed; opacity: 0.7; }
 .btn-remove-file { background: none; border: none; color: #dc3545; font-size: 1.2em; padding: 0 5px; }
 .file-upload-label { background-color: #0d6efd; color: white; /* Estilo consistente */ }
 .file-upload-label:hover { background-color: #0b5ed7; }
+/* === ESTILOS PARA LA BARRA DE BÚSQUEDA === */
+
+.search-box {
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 20px; /* Bordes redondeados para el contenedor */
+  padding-left: 5px;
+  transition: background 0.3s ease;
+}
+
+.search-box.open {
+  background: rgba(255, 255, 255, 0.25); /* Un fondo más opaco al abrir */
+  box-shadow: 0 0 5px rgba(0,0,0,0.1);
+}
+
+.search-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px 10px;
+  font-size: 18px; /* Ajusta el tamaño del emoji/ícono */
+  color: white;
+  display: flex; /* Para centrar bien el ícono */
+  align-items: center;
+  justify-content: center;
+}
+
+.search-input {
+  /* Estado colapsado (oculto) */
+  width: 0;
+  border: none;
+  background: none;
+  padding: 0;
+  opacity: 0;
+  visibility: hidden; /* Oculta completamente */
+
+  /* Transición para la animación */
+  transition: all 0.3s ease-in-out;
+
+  /* Estilos del texto */
+  font-size: 14px;
+  color: white;
+  outline: none; /* Quita el borde azul de Chrome al hacer foco */
+}
+
+/* Estilo para el placeholder (texto de ejemplo) */
+.search-input::placeholder {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* Estado expandido (abierto) */
+.search-box.open .search-input {
+  width: 200px; /* Ancho del campo de texto al expandirse */
+  padding: 8px 15px 8px 5px; /* Padding (top, right, bottom, left) */
+  opacity: 1;
+  visibility: visible; /* Lo hace visible */
+}
