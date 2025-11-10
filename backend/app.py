@@ -1109,14 +1109,6 @@ def delete_agente(id):
          if "Admin privileges required" in str(e):
               return jsonify({"error": str(e)}), 403
          return jsonify({"error": f"Internal server error: {str(e)}"}), 500
-
-# --- END: Agent Management Endpoints ---
-
-
-if __name__ == '__main__':
-    # Consider using a more production-ready server like Gunicorn/Waitress
-    # and disabling debug mode for production
-    app.run(debug=True, host='0.0.0.0') # Listen on all interfaces if running in Docker/cloud
     
     
 @app.route('/api/dashboard/stats', methods=['GET'])
@@ -1310,3 +1302,9 @@ def get_recent_activity():
     finally:
         if conn:
             conn.close()
+            
+            
+if __name__ == '__main__':
+    # Consider using a more production-ready server like Gunicorn/Waitress
+    # and disabling debug mode for production
+    app.run(debug=True, host='0.0.0.0') # Listen on all interfaces if running in Docker/cloud
