@@ -244,7 +244,7 @@
                   <option [ngValue]="null">-- Selecciona --</option>
                   @for (item of catalogos['estados_publicacion']; track item.id) { <option [value]="item.id">{{ item.nombre }}</option> }
                 </select>
-                @if (estadoPubEditInput.invalid && (estadoPubEditInput.dirty || estadoPubEditInput.touched || editForm.submitted)) {
+                @if (estadoPubEditInput.invalid && (estadoPubEditInput.dirty || tipoNegocioEditInput.touched || editForm.submitted)) {
                   <span class="error-text">Campo requerido.</span>
                 }
               </label>

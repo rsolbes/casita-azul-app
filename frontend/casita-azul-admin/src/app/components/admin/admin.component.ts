@@ -1,7 +1,7 @@
 // src/app/components/admin/admin.component.ts
-import { Component, OnInit, ViewChild } from '@angular/core';
-import { Router, RouterLink } from '@angular/router'; // Import RouterLink
-import { FormsModule, NgForm } from '@angular/forms';
+import { Component, OnInit, ViewChild } from '@angular/core'; // <-- CAMBIO: Añadido ViewChild
+import { Router, RouterLink } from '@angular/router';
+import { FormsModule, NgForm } from '@angular/forms'; // <-- CAMBIO: Añadido NgForm
 import { CommonModule } from '@angular/common';
 import { PropertyService, Property, PropertyImage, CatalogosApiResponse } from '../../services/property.service';
 import { AuthService } from '../../services/auth.service';
@@ -15,7 +15,7 @@ import { forkJoin, Observable } from 'rxjs'; // Import Observable
   styleUrls: ['./admin.component.css']
 })
 export class AdminComponent implements OnInit {
-  title = 'Administración de Propiedades'; // Title adjusted
+  title = 'Administración de Propiedades';
   isLoading = false;
   errorMessage = '';
   successMessage = '';
@@ -36,8 +36,9 @@ export class AdminComponent implements OnInit {
 
   // Information for the logged-in user
   currentUser: any = null;
-  isAdmin = false; // Add isAdmin property
+  isAdmin = false;
 
+  // --- CAMBIO: Añadidas referencias a los formularios del HTML ---
   @ViewChild('editForm') editForm!: NgForm;
   @ViewChild('addForm') addForm!: NgForm;
 
@@ -183,17 +184,20 @@ export class AdminComponent implements OnInit {
     this.isNewMode = true; // Estamos agregando
     this.errorMessage = ''; // Limpia error
     this.successMessage = ''; // Limpia éxito
-    // Mostramos el formulario de agregar
-    // En tu HTML actual, el formulario de agregar se muestra con !editingProperty
-    // Si quieres un botón explícito, necesitarías otra variable
   }
 
 
   saveChanges() {
     if (!this.editingProperty) return;
 
+    // --- CAMBIO: Añadida validación ---
+    // Marcamos todos los campos como "touched" para forzar la UI a mostrar errores
+    this.editForm.form.markAllAsTouched();
+    
+    // Si el formulario (que ahora incluye los ngModelGroup) es inválido, no continuamos.
     if (!this.editForm.valid) {
-      return; 
+      console.log("Formulario de EDICIÓN es inválido.");
+      return;
     }
 
     this.normalizeNullValues(this.editingProperty);
@@ -245,10 +249,16 @@ export class AdminComponent implements OnInit {
   }
 
   addProperty() {
-    if (!this.editForm.valid) {
+    // --- CAMBIO: Añadida validación ---
+    // Marcamos todos los campos como "touched" para forzar la UI a mostrar errores
+    this.addForm.form.markAllAsTouched();
+
+    // Si el formulario (que ahora incluye los ngModelGroup) es inválido, no continuamos.
+    if (!this.addForm.valid) {
+      console.log("Formulario de AGREGAR es inválido.");
       return; 
     }
-    
+
     this.normalizeNullValues(this.newProperty);
      // Limpia mensajes antes de la operación
     this.errorMessage = '';
