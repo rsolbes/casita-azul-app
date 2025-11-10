@@ -283,24 +283,36 @@ def get_catalogos():
     try:
         conn = get_db_connection()
         cursor = conn.cursor(cursor_factory=RealDictCursor)
-
+        
         tablas_catalogo = [
-            'agentes', 'agentes_externos', 'ciudades', 'estados',
+            'agentes', 'agentes_externos', 'ciudades', 'estados', 
             'estados_fisicos', 'estados_publicacion', 'frecuencias_alquiler',
             'monedas', 'tipos_negocio', 'tipos_propiedad', 'zonas'
         ]
-
+        
         for tabla in tablas_catalogo:
-            # Handle 'agentes' separately if it needs more columns
-            if tabla == 'agentes':
-                cursor.execute("SELECT id, nombre, email, telefono FROM public.agentes ORDER BY nombre ASC;")
+            
+            # --- INICIO DE LA MODIFICACIÓN ---
+            if tabla == 'ciudades':
+                # Query especial para ciudades para incluir estado_id
+                cursor.execute("SELECT id, nombre, estado_id FROM public.ciudades ORDER BY nombre ASC;")
+            elif tabla == 'agentes':
+                # Los agentes se manejan por separado más abajo
+                continue
             else:
+                # Query estándar para las demás tablas
                 cursor.execute(f"SELECT id, nombre FROM public.{tabla} ORDER BY nombre ASC;")
+            # --- FIN DE LA MODIFICACIÓN ---
+            
             catalogos[tabla] = cursor.fetchall()
+            
+        # El query de agentes se mantiene como estaba en tu original
+        cursor.execute("SELECT id, nombre, email, telefono FROM public.agentes ORDER BY nombre ASC;")
+        catalogos['agentes'] = cursor.fetchall()
 
         cursor.close()
         return jsonify(catalogos)
-
+        
     except Exception as e:
         print(e)
         return jsonify({"error": str(e)}), 500
