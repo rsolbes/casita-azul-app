@@ -1,7 +1,7 @@
 // src/app/components/admin/admin.component.ts
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild } from '@angular/core';
 import { Router, RouterLink } from '@angular/router'; // Import RouterLink
-import { FormsModule } from '@angular/forms';
+import { FormsModule, NgForm } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { PropertyService, Property, PropertyImage, CatalogosApiResponse } from '../../services/property.service';
 import { AuthService } from '../../services/auth.service';
@@ -37,6 +37,9 @@ export class AdminComponent implements OnInit {
   // Information for the logged-in user
   currentUser: any = null;
   isAdmin = false; // Add isAdmin property
+
+  @ViewChild('editForm') editForm!: NgForm;
+  @ViewChild('addForm') addForm!: NgForm;
 
   constructor(
     private propertyService: PropertyService,
@@ -188,6 +191,11 @@ export class AdminComponent implements OnInit {
 
   saveChanges() {
     if (!this.editingProperty) return;
+
+    if (!this.editForm.valid) {
+      return; 
+    }
+
     this.normalizeNullValues(this.editingProperty);
     // Limpia mensajes antes de la operación
     this.errorMessage = '';
@@ -237,6 +245,10 @@ export class AdminComponent implements OnInit {
   }
 
   addProperty() {
+    if (!this.editForm.valid) {
+      return; 
+    }
+    
     this.normalizeNullValues(this.newProperty);
      // Limpia mensajes antes de la operación
     this.errorMessage = '';

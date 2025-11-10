@@ -97,11 +97,16 @@
       <section class="form-section editing-section">
         <h3>✏️ Editando Propiedad ID: {{ editingProperty.id }}</h3>
 
-        <form class="property-form" #editForm="ngForm" (ngSubmit)="editForm.valid && saveChanges()">
+        <form class="property-form" #editForm="ngForm" (ngSubmit)="saveChanges()">
           
           <details class="form-section-details" open>
-            <summary class="form-section-summary"><legend>📝 Datos Principales</legend></summary>
-            <div class="fieldset-content form-grid">
+            <summary class="form-section-summary">
+              <legend>📝 Datos Principales</legend>
+              @if (datosPrincipalesGroup.invalid && (datosPrincipalesGroup.touched || editForm.submitted)) {
+                <span class="section-error-marker"> (Faltan datos)</span>
+              }
+            </summary>
+            <div class="fieldset-content form-grid" ngModelGroup="datosPrincipales" #datosPrincipalesGroup="ngModelGroup">
               <label>Título: <span class="required-marker">(Requerido)</span>
                 <input [(ngModel)]="editingProperty.titulo" name="edit_titulo" required #tituloEditInput="ngModel" />
                 @if (tituloEditInput.invalid && (tituloEditInput.dirty || tituloEditInput.touched || editForm.submitted)) {
@@ -209,8 +214,13 @@
           </details>
 
           <details class="form-section-details">
-            <summary class="form-section-summary"><legend>🏷️ Clasificación</legend></summary>
-            <div class="fieldset-content form-grid">
+            <summary class="form-section-summary">
+              <legend>🏷️ Clasificación</legend>
+              @if (clasificacionGroup.invalid && (clasificacionGroup.touched || editForm.submitted)) {
+                <span class="section-error-marker"> (Faltan datos)</span>
+              }
+            </summary>
+            <div class="fieldset-content form-grid" ngModelGroup="clasificacion" #clasificacionGroup="ngModelGroup">
               <label>Tipo de Negocio: <span class="required-marker">(Requerido)</span>
                 <select [(ngModel)]="editingProperty.tipo_negocio_id" name="edit_tipo_neg" required #tipoNegocioEditInput="ngModel">
                   <option [ngValue]="null">-- Selecciona --</option>
@@ -281,8 +291,13 @@
           </details>
 
           <details class="form-section-details">
-            <summary class="form-section-summary"><legend>🧑‍💼 Agentes y Validación</legend></summary>
-            <div class="fieldset-content form-grid">
+            <summary class="form-section-summary">
+              <legend>🧑‍💼 Agentes y Validación</legend>
+              @if (agentesGroup.invalid && (agentesGroup.touched || editForm.submitted)) {
+                <span class="section-error-marker"> (Faltan datos)</span>
+              }
+            </summary>
+            <div class="fieldset-content form-grid" ngModelGroup="agentes" #agentesGroup="ngModelGroup">
               <label>Captado por (Agente): <span class="required-marker">(Requerido)</span>
                 <select [(ngModel)]="editingProperty.captado_por_agente_id" name="edit_cap_ag" required #captadoPorEditInput="ngModel">
                   <option [ngValue]="null">-- Selecciona --</option>
@@ -320,22 +335,9 @@
           </details>
 
           <div class="form-actions main-actions">
-            <button type="submit" class="btn-submit" [disabled]="uploadingImages || editForm.invalid"> {{ uploadingImages ? '📤 Subiendo imágenes...' : '💾 Guardar Cambios' }}
+            <button type="submit" class="btn-submit" [disabled]="uploadingImages"> {{ uploadingImages ? '📤 Subiendo imágenes...' : '💾 Guardar Cambios' }}
             </button>
             <button type="button" class="btn-cancel" (click)="cancelEdit()">❌ Cancelar</button>
-            
-            @if (editForm.invalid && (editForm.touched || editForm.submitted)) {
-              <div class="alert alert-error form-validation-summary">
-                <p>Por favor corrige los siguientes campos:</p>
-                <ul>
-                  @if (tituloEditInput.invalid) { <li>Título es requerido.</li> }
-                  @if (tipoNegocioEditInput.invalid) { <li>Tipo de Negocio es requerido.</li> }
-                  @if (tipoPropiedadEditInput.invalid) { <li>Tipo de Propiedad es requerido.</li> }
-                  @if (estadoPubEditInput.invalid) { <li>Estado Publicación es requerido.</li> }
-                  @if (captadoPorEditInput.invalid) { <li>Agente (Captado por) es requerido.</li> }
-                </ul>
-              </div>
-            }
           </div>
         </form>
       </section>
@@ -344,11 +346,16 @@
     @if (isNewMode) {
       <section class="form-section">
         <h3>➕ Agregar Nueva Propiedad</h3>
-        <form class="property-form" #addForm="ngForm" (ngSubmit)="addForm.valid && addProperty()">
+        <form class="property-form" #addForm="ngForm" (ngSubmit)="addProperty()">
           
           <details class="form-section-details" open>
-            <summary class="form-section-summary"><legend>📝 Datos Principales</legend></summary>
-            <div class="fieldset-content form-grid">
+            <summary class="form-section-summary">
+              <legend>📝 Datos Principales</legend>
+              @if (datosPrincipalesGroup.invalid && (datosPrincipalesGroup.touched || addForm.submitted)) {
+                <span class="section-error-marker"> (Faltan datos)</span>
+              }
+            </summary>
+            <div class="fieldset-content form-grid" ngModelGroup="datosPrincipales" #datosPrincipalesGroup="ngModelGroup">
               <label>Título: <span class="required-marker">(Requerido)</span>
                 <input [(ngModel)]="newProperty.titulo" name="new_titulo" required #tituloNewInput="ngModel" />
                 @if (tituloNewInput.invalid && (tituloNewInput.dirty || tituloNewInput.touched || addForm.submitted)) {
@@ -435,8 +442,13 @@
           </details>
 
           <details class="form-section-details">
-            <summary class="form-section-summary"><legend>🏷️ Clasificación</legend></summary>
-            <div class="fieldset-content form-grid">
+            <summary class="form-section-summary">
+              <legend>🏷️ Clasificación</legend>
+               @if (clasificacionGroup.invalid && (clasificacionGroup.touched || addForm.submitted)) {
+                <span class="section-error-marker"> (Faltan datos)</span>
+              }
+            </summary>
+            <div class="fieldset-content form-grid" ngModelGroup="clasificacion" #clasificacionGroup="ngModelGroup">
               <label>Tipo de Negocio: <span class="required-marker">(Requerido)</span>
                 <select [(ngModel)]="newProperty.tipo_negocio_id" name="new_tipo_neg" required #tipoNegocioNewInput="ngModel">
                   <option [ngValue]="null">-- Selecciona --</option>
@@ -507,8 +519,13 @@
           </details>
 
           <details class="form-section-details">
-            <summary class="form-section-summary"><legend>🧑‍💼 Agentes y Validación</legend></summary>
-            <div class="fieldset-content form-grid">
+            <summary class="form-section-summary">
+              <legend>🧑‍💼 Agentes y Validación</legend>
+              @if (agentesGroup.invalid && (agentesGroup.touched || addForm.submitted)) {
+                <span class="section-error-marker"> (Faltan datos)</span>
+              }
+            </summary>
+            <div class="fieldset-content form-grid" ngModelGroup="agentes" #agentesGroup="ngModelGroup">
                <label>Captado por (Agente): <span class="required-marker">(Requerido)</span>
                 <select [(ngModel)]="newProperty.captado_por_agente_id" name="new_cap_ag" required #captadoPorNewInput="ngModel">
                   <option [ngValue]="null">-- Selecciona --</option>
@@ -546,22 +563,9 @@
           </details>
 
           <div class="form-actions main-actions">
-            <button type="submit" class="btn-submit" [disabled]="uploadingImages || addForm.invalid"> {{ uploadingImages ? '📤 Subiendo imágenes...' : '➕ Agregar Propiedad' }}
+            <button type="submit" class="btn-submit" [disabled]="uploadingImages"> {{ uploadingImages ? '📤 Subiendo imágenes...' : '➕ Agregar Propiedad' }}
             </button>
              <button type="button" class="btn-cancel" (click)="cancelEdit()">❌ Cancelar</button>
-
-            @if (addForm.invalid && (addForm.touched || addForm.submitted)) {
-              <div class="alert alert-error form-validation-summary">
-                <p>Por favor corrige los siguientes campos:</p>
-                <ul>
-                  @if (tituloNewInput.invalid) { <li>Título es requerido.</li> }
-                  @if (tipoNegocioNewInput.invalid) { <li>Tipo de Negocio es requerido.</li> }
-                  @if (tipoPropiedadNewInput.invalid) { <li>Tipo de Propiedad es requerido.</li> }
-                  @if (estadoPubNewInput.invalid) { <li>Estado Publicación es requerido.</li> }
-                  @if (captadoPorNewInput.invalid) { <li>Agente (Captado por) es requerido.</li> }
-                </ul>
-              </div>
-            }
           </div>
         </form>
       </section>
