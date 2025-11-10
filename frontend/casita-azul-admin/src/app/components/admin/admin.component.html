@@ -97,18 +97,31 @@
       <section class="form-section editing-section">
         <h3>✏️ Editando Propiedad ID: {{ editingProperty.id }}</h3>
 
-        <form class="property-form" #editForm="ngForm" (ngSubmit)="saveChanges()"> <details class="form-section-details" open>
+        <form class="property-form" #editForm="ngForm" (ngSubmit)="editForm.valid && saveChanges()">
+          
+          <details class="form-section-details" open>
             <summary class="form-section-summary"><legend>📝 Datos Principales</legend></summary>
             <div class="fieldset-content form-grid">
-              <label>Título: <input [(ngModel)]="editingProperty.titulo" name="edit_titulo" required /></label>
-              <label>Descripción: <textarea [(ngModel)]="editingProperty.descripcion" name="edit_desc" rows="4"></textarea></label>
-              <label>Dirección: <input [(ngModel)]="editingProperty.direccion" name="edit_dir" /></label>
-              <label>Código Postal: <input [(ngModel)]="editingProperty.codigo_postal" name="edit_cp" /></label>
+              <label>Título: <span class="required-marker">(Requerido)</span>
+                <input [(ngModel)]="editingProperty.titulo" name="edit_titulo" required #tituloEditInput="ngModel" />
+                @if (tituloEditInput.invalid && (tituloEditInput.dirty || tituloEditInput.touched || editForm.submitted)) {
+                  <span class="error-text">El título es requerido.</span>
+                }
+              </label>
+              <label>Descripción: <span class="optional-marker">(Opcional)</span>
+                <textarea [(ngModel)]="editingProperty.descripcion" name="edit_desc" rows="4"></textarea>
+              </label>
+              <label>Dirección: <span class="optional-marker">(Opcional)</span>
+                <input [(ngModel)]="editingProperty.direccion" name="edit_dir" />
+              </label>
+              <label>Código Postal: <span class="optional-marker">(Opcional)</span>
+                <input [(ngModel)]="editingProperty.codigo_postal" name="edit_cp" />
+              </label>
             </div>
           </details>
 
           <details class="form-section-details images-section">
-            <summary class="form-section-summary"><legend>📸 Imágenes</legend></summary>
+            <summary class="form-section-summary"><legend>📸 Imágenes <span class="optional-marker">(Opcional)</span></legend></summary>
             <div class="fieldset-content">
               @if (editingImages && editingImages.length > 0) {
                 <div class="images-grid">
@@ -157,7 +170,7 @@
           </details>
 
           <details class="form-section-details">
-            <summary class="form-section-summary"><legend>💲 Valores</legend></summary>
+            <summary class="form-section-summary"><legend>💲 Valores <span class="optional-marker">(Opcional)</span></legend></summary>
             <div class="fieldset-content form-grid">
               <label>Precio (Venta): <input [(ngModel)]="editingProperty.precio" name="edit_precio" type="number" step="any" /></label>
               <label>Precio (Alquiler): <input [(ngModel)]="editingProperty.precio_alquiler" name="edit_precio_alq" type="number" step="any" /></label>
@@ -180,7 +193,7 @@
           </details>
 
           <details class="form-section-details">
-            <summary class="form-section-summary"><legend>📐 Dimensiones y Espacios</legend></summary>
+            <summary class="form-section-summary"><legend>📐 Dimensiones y Espacios <span class="optional-marker">(Opcional)</span></legend></summary>
             <div class="fieldset-content form-grid">
               <label>Habitaciones: <input [(ngModel)]="editingProperty.habitaciones" name="edit_hab" type="number" min="0" /></label>
               <label>Alcobas: <input [(ngModel)]="editingProperty.alcobas" name="edit_alc" type="number" min="0" /></label>
@@ -198,25 +211,34 @@
           <details class="form-section-details">
             <summary class="form-section-summary"><legend>🏷️ Clasificación</legend></summary>
             <div class="fieldset-content form-grid">
-              <label>Tipo de Negocio:
-                <select [(ngModel)]="editingProperty.tipo_negocio_id" name="edit_tipo_neg" required>
+              <label>Tipo de Negocio: <span class="required-marker">(Requerido)</span>
+                <select [(ngModel)]="editingProperty.tipo_negocio_id" name="edit_tipo_neg" required #tipoNegocioEditInput="ngModel">
                   <option [ngValue]="null">-- Selecciona --</option>
                   @for (item of catalogos['tipos_negocio']; track item.id) { <option [value]="item.id">{{ item.nombre }}</option> }
                 </select>
+                @if (tipoNegocioEditInput.invalid && (tipoNegocioEditInput.dirty || tipoNegocioEditInput.touched || editForm.submitted)) {
+                  <span class="error-text">Campo requerido.</span>
+                }
               </label>
-              <label>Tipo de Propiedad:
-                <select [(ngModel)]="editingProperty.tipo_propiedad_id" name="edit_tipo_prop" required>
+              <label>Tipo de Propiedad: <span class="required-marker">(Requerido)</span>
+                <select [(ngModel)]="editingProperty.tipo_propiedad_id" name="edit_tipo_prop" required #tipoPropiedadEditInput="ngModel">
                   <option [ngValue]="null">-- Selecciona --</option>
                   @for (item of catalogos['tipos_propiedad']; track item.id) { <option [value]="item.id">{{ item.nombre }}</option> }
                 </select>
+                @if (tipoPropiedadEditInput.invalid && (tipoPropiedadEditInput.dirty || tipoPropiedadEditInput.touched || editForm.submitted)) {
+                  <span class="error-text">Campo requerido.</span>
+                }
               </label>
-              <label>Estado Publicación:
-                <select [(ngModel)]="editingProperty.estado_publicacion_id" name="edit_est_pub" required>
+              <label>Estado Publicación: <span class="required-marker">(Requerido)</span>
+                <select [(ngModel)]="editingProperty.estado_publicacion_id" name="edit_est_pub" required #estadoPubEditInput="ngModel">
                   <option [ngValue]="null">-- Selecciona --</option>
                   @for (item of catalogos['estados_publicacion']; track item.id) { <option [value]="item.id">{{ item.nombre }}</option> }
                 </select>
+                @if (estadoPubEditInput.invalid && (estadoPubEditInput.dirty || estadoPubEditInput.touched || editForm.submitted)) {
+                  <span class="error-text">Campo requerido.</span>
+                }
               </label>
-              <label>Estado Físico:
+              <label>Estado Físico: <span class="optional-marker">(Opcional)</span>
                 <select [(ngModel)]="editingProperty.estado_fisico_id" name="edit_est_fis">
                   <option [ngValue]="null">-- Opcional --</option>
                   @for (item of catalogos['estados_fisicos']; track item.id) { <option [value]="item.id">{{ item.nombre }}</option> }
@@ -226,7 +248,7 @@
           </details>
 
           <details class="form-section-details">
-            <summary class="form-section-summary"><legend>📍 Ubicación (Catálogos)</legend></summary>
+            <summary class="form-section-summary"><legend>📍 Ubicación (Catálogos) <span class="optional-marker">(Opcional)</span></legend></summary>
             <div class="fieldset-content form-grid">
               <label>Estado:
                 <select [(ngModel)]="editingProperty.estado_id" name="edit_estado">
@@ -250,7 +272,7 @@
           </details>
 
           <details class="form-section-details">
-            <summary class="form-section-summary"><legend>🗺️ Ubicación (Coords. y Varios)</legend></summary>
+            <summary class="form-section-summary"><legend>🗺️ Ubicación (Coords. y Varios) <span class="optional-marker">(Opcional)</span></legend></summary>
             <div class="fieldset-content form-grid">
               <label>Latitud: <input [(ngModel)]="editingProperty.lat" name="edit_lat" type="number" step="any" /></label>
               <label>Longitud: <input [(ngModel)]="editingProperty.lng" name="edit_lng" type="number" step="any" /></label>
@@ -261,29 +283,34 @@
           <details class="form-section-details">
             <summary class="form-section-summary"><legend>🧑‍💼 Agentes y Validación</legend></summary>
             <div class="fieldset-content form-grid">
-              <label>Captado por (Agente):
-                <select [(ngModel)]="editingProperty.captado_por_agente_id" name="edit_cap_ag" required>
+              <label>Captado por (Agente): <span class="required-marker">(Requerido)</span>
+                <select [(ngModel)]="editingProperty.captado_por_agente_id" name="edit_cap_ag" required #captadoPorEditInput="ngModel">
                   <option [ngValue]="null">-- Selecciona --</option>
                   @for (item of catalogos['agentes']; track item.id) { <option [value]="item.id">{{ item.nombre }}</option> }
                 </select>
+                @if (captadoPorEditInput.invalid && (captadoPorEditInput.dirty || captadoPorEditInput.touched || editForm.submitted)) {
+                  <span class="error-text">Campo requerido.</span>
+                }
               </label>
-              <label>Agente Asignado:
+              <label>Agente Asignado: <span class="optional-marker">(Opcional)</span>
                 <select [(ngModel)]="editingProperty.agente_id" name="edit_ag">
                   <option [ngValue]="null">-- Opcional --</option>
                   @for (item of catalogos['agentes']; track item.id) { <option [value]="item.id">{{ item.nombre }}</option> }
                 </select>
               </label>
-              <label>Agente Externo:
+              <label>Agente Externo: <span class="optional-marker">(Opcional)</span>
                 <select [(ngModel)]="editingProperty.agente_externo_id" name="edit_ag_ext">
                   <option [ngValue]="null">-- Opcional --</option>
                   @for (item of catalogos['agentes_externos']; track item.id) { <option [value]="item.id">{{ item.nombre }}</option> }
                 </select>
               </label>
-              <label>Convenio URL: <input [(ngModel)]="editingProperty.convenio_url" name="edit_conv_url" type="url" /></label>
-              <label class="checkbox-label">Convenio Validado:
+              <label>Convenio URL: <span class="optional-marker">(Opcional)</span>
+                <input [(ngModel)]="editingProperty.convenio_url" name="edit_conv_url" type="url" />
+              </label>
+              <label class="checkbox-label">Convenio Validado: <span class="optional-marker">(Opcional)</span>
                 <input type="checkbox" [(ngModel)]="editingProperty.convenio_validado" name="edit_conv_val" />
               </label>
-              <label>Validado por (Agente):
+              <label>Validado por (Agente): <span class="optional-marker">(Opcional)</span>
                 <select [(ngModel)]="editingProperty.validado_por_usuario_id" name="edit_val_usr">
                   <option [ngValue]="null">-- Opcional --</option>
                   @for (item of catalogos['agentes']; track item.id) { <option [value]="item.id">{{ item.nombre }}</option> }
@@ -296,6 +323,19 @@
             <button type="submit" class="btn-submit" [disabled]="uploadingImages || editForm.invalid"> {{ uploadingImages ? '📤 Subiendo imágenes...' : '💾 Guardar Cambios' }}
             </button>
             <button type="button" class="btn-cancel" (click)="cancelEdit()">❌ Cancelar</button>
+            
+            @if (editForm.invalid && (editForm.touched || editForm.submitted)) {
+              <div class="alert alert-error form-validation-summary">
+                <p>Por favor corrige los siguientes campos:</p>
+                <ul>
+                  @if (tituloEditInput.invalid) { <li>Título es requerido.</li> }
+                  @if (tipoNegocioEditInput.invalid) { <li>Tipo de Negocio es requerido.</li> }
+                  @if (tipoPropiedadEditInput.invalid) { <li>Tipo de Propiedad es requerido.</li> }
+                  @if (estadoPubEditInput.invalid) { <li>Estado Publicación es requerido.</li> }
+                  @if (captadoPorEditInput.invalid) { <li>Agente (Captado por) es requerido.</li> }
+                </ul>
+              </div>
+            }
           </div>
         </form>
       </section>
@@ -304,18 +344,31 @@
     @if (isNewMode) {
       <section class="form-section">
         <h3>➕ Agregar Nueva Propiedad</h3>
-        <form class="property-form" #addForm="ngForm" (ngSubmit)="addProperty()"> <details class="form-section-details" open>
+        <form class="property-form" #addForm="ngForm" (ngSubmit)="addForm.valid && addProperty()">
+          
+          <details class="form-section-details" open>
             <summary class="form-section-summary"><legend>📝 Datos Principales</legend></summary>
             <div class="fieldset-content form-grid">
-              <label>Título: <input [(ngModel)]="newProperty.titulo" name="new_titulo" required /></label>
-              <label>Descripción: <textarea [(ngModel)]="newProperty.descripcion" name="new_desc" rows="4"></textarea></label>
-              <label>Dirección: <input [(ngModel)]="newProperty.direccion" name="new_dir" /></label>
-              <label>Código Postal: <input [(ngModel)]="newProperty.codigo_postal" name="new_cp" /></label>
+              <label>Título: <span class="required-marker">(Requerido)</span>
+                <input [(ngModel)]="newProperty.titulo" name="new_titulo" required #tituloNewInput="ngModel" />
+                @if (tituloNewInput.invalid && (tituloNewInput.dirty || tituloNewInput.touched || addForm.submitted)) {
+                  <span class="error-text">El título es requerido.</span>
+                }
+              </label>
+              <label>Descripción: <span class="optional-marker">(Opcional)</span>
+                <textarea [(ngModel)]="newProperty.descripcion" name="new_desc" rows="4"></textarea>
+              </label>
+              <label>Dirección: <span class="optional-marker">(Opcional)</span>
+                <input [(ngModel)]="newProperty.direccion" name="new_dir" />
+              </label>
+              <label>Código Postal: <span class="optional-marker">(Opcional)</span>
+                <input [(ngModel)]="newProperty.codigo_postal" name="new_cp" />
+              </label>
             </div>
           </details>
 
           <details class="form-section-details images-section">
-            <summary class="form-section-summary"><legend>📸 Imágenes</legend></summary>
+            <summary class="form-section-summary"><legend>📸 Imágenes <span class="optional-marker">(Opcional)</span></legend></summary>
             <div class="fieldset-content">
               <div class="upload-section">
                 <label class="file-upload-label">
@@ -343,7 +396,7 @@
           </details>
 
           <details class="form-section-details">
-            <summary class="form-section-summary"><legend>💲 Valores</legend></summary>
+            <summary class="form-section-summary"><legend>💲 Valores <span class="optional-marker">(Opcional)</span></legend></summary>
             <div class="fieldset-content form-grid">
               <label>Precio (Venta): <input [(ngModel)]="newProperty.precio" name="new_precio" type="number" step="any" /></label>
               <label>Precio (Alquiler): <input [(ngModel)]="newProperty.precio_alquiler" name="new_precio_alq" type="number" step="any" /></label>
@@ -366,7 +419,7 @@
           </details>
 
            <details class="form-section-details">
-            <summary class="form-section-summary"><legend>📐 Dimensiones y Espacios</legend></summary>
+            <summary class="form-section-summary"><legend>📐 Dimensiones y Espacios <span class="optional-marker">(Opcional)</span></legend></summary>
             <div class="fieldset-content form-grid">
               <label>Habitaciones: <input [(ngModel)]="newProperty.habitaciones" name="new_hab" type="number" min="0" value="0" /></label>
               <label>Alcobas: <input [(ngModel)]="newProperty.alcobas" name="new_alc" type="number" min="0" value="0" /></label>
@@ -384,25 +437,34 @@
           <details class="form-section-details">
             <summary class="form-section-summary"><legend>🏷️ Clasificación</legend></summary>
             <div class="fieldset-content form-grid">
-              <label>Tipo de Negocio:
-                <select [(ngModel)]="newProperty.tipo_negocio_id" name="new_tipo_neg" required>
+              <label>Tipo de Negocio: <span class="required-marker">(Requerido)</span>
+                <select [(ngModel)]="newProperty.tipo_negocio_id" name="new_tipo_neg" required #tipoNegocioNewInput="ngModel">
                   <option [ngValue]="null">-- Selecciona --</option>
                   @for (item of catalogos['tipos_negocio']; track item.id) { <option [value]="item.id">{{ item.nombre }}</option> }
                 </select>
+                @if (tipoNegocioNewInput.invalid && (tipoNegocioNewInput.dirty || tipoNegocioNewInput.touched || addForm.submitted)) {
+                  <span class="error-text">Campo requerido.</span>
+                }
               </label>
-              <label>Tipo de Propiedad:
-                <select [(ngModel)]="newProperty.tipo_propiedad_id" name="new_tipo_prop" required>
+              <label>Tipo de Propiedad: <span class="required-marker">(Requerido)</span>
+                <select [(ngModel)]="newProperty.tipo_propiedad_id" name="new_tipo_prop" required #tipoPropiedadNewInput="ngModel">
                   <option [ngValue]="null">-- Selecciona --</option>
                   @for (item of catalogos['tipos_propiedad']; track item.id) { <option [value]="item.id">{{ item.nombre }}</option> }
                 </select>
+                @if (tipoPropiedadNewInput.invalid && (tipoPropiedadNewInput.dirty || tipoPropiedadNewInput.touched || addForm.submitted)) {
+                  <span class="error-text">Campo requerido.</span>
+                }
               </label>
-              <label>Estado Publicación:
-                <select [(ngModel)]="newProperty.estado_publicacion_id" name="new_est_pub" required>
+              <label>Estado Publicación: <span class="required-marker">(Requerido)</span>
+                <select [(ngModel)]="newProperty.estado_publicacion_id" name="new_est_pub" required #estadoPubNewInput="ngModel">
                   <option [ngValue]="null">-- Selecciona --</option>
                   @for (item of catalogos['estados_publicacion']; track item.id) { <option [value]="item.id">{{ item.nombre }}</option> }
                 </select>
+                @if (estadoPubNewInput.invalid && (estadoPubNewInput.dirty || estadoPubNewInput.touched || addForm.submitted)) {
+                  <span class="error-text">Campo requerido.</span>
+                }
               </label>
-              <label>Estado Físico:
+              <label>Estado Físico: <span class="optional-marker">(Opcional)</span>
                 <select [(ngModel)]="newProperty.estado_fisico_id" name="new_est_fis">
                   <option [ngValue]="null">-- Opcional --</option>
                   @for (item of catalogos['estados_fisicos']; track item.id) { <option [value]="item.id">{{ item.nombre }}</option> }
@@ -412,7 +474,7 @@
           </details>
 
           <details class="form-section-details">
-            <summary class="form-section-summary"><legend>📍 Ubicación (Catálogos)</legend></summary>
+            <summary class="form-section-summary"><legend>📍 Ubicación (Catálogos) <span class="optional-marker">(Opcional)</span></legend></summary>
             <div class="fieldset-content form-grid">
                <label>Estado:
                 <select [(ngModel)]="newProperty.estado_id" name="new_estado">
@@ -436,7 +498,7 @@
           </details>
 
           <details class="form-section-details">
-            <summary class="form-section-summary"><legend>🗺️ Ubicación (Coords. y Varios)</legend></summary>
+            <summary class="form-section-summary"><legend>🗺️ Ubicación (Coords. y Varios) <span class="optional-marker">(Opcional)</span></legend></summary>
             <div class="fieldset-content form-grid">
               <label>Latitud: <input [(ngModel)]="newProperty.lat" name="new_lat" type="number" step="any" /></label>
               <label>Longitud: <input [(ngModel)]="newProperty.lng" name="new_lng" type="number" step="any" /></label>
@@ -447,29 +509,34 @@
           <details class="form-section-details">
             <summary class="form-section-summary"><legend>🧑‍💼 Agentes y Validación</legend></summary>
             <div class="fieldset-content form-grid">
-               <label>Captado por (Agente):
-                <select [(ngModel)]="newProperty.captado_por_agente_id" name="new_cap_ag" required>
+               <label>Captado por (Agente): <span class="required-marker">(Requerido)</span>
+                <select [(ngModel)]="newProperty.captado_por_agente_id" name="new_cap_ag" required #captadoPorNewInput="ngModel">
                   <option [ngValue]="null">-- Selecciona --</option>
                   @for (item of catalogos['agentes']; track item.id) { <option [value]="item.id">{{ item.nombre }}</option> }
                 </select>
+                 @if (captadoPorNewInput.invalid && (captadoPorNewInput.dirty || captadoPorNewInput.touched || addForm.submitted)) {
+                  <span class="error-text">Campo requerido.</span>
+                }
               </label>
-              <label>Agente Asignado:
+              <label>Agente Asignado: <span class="optional-marker">(Opcional)</span>
                 <select [(ngModel)]="newProperty.agente_id" name="new_ag">
                   <option [ngValue]="null">-- Opcional --</option>
                   @for (item of catalogos['agentes']; track item.id) { <option [value]="item.id">{{ item.nombre }}</option> }
                 </select>
               </label>
-              <label>Agente Externo:
+              <label>Agente Externo: <span class="optional-marker">(Opcional)</span>
                 <select [(ngModel)]="newProperty.agente_externo_id" name="new_ag_ext">
                   <option [ngValue]="null">-- Opcional --</option>
                   @for (item of catalogos['agentes_externos']; track item.id) { <option [value]="item.id">{{ item.nombre }}</option> }
                 </select>
               </label>
-              <label>Convenio URL: <input [(ngModel)]="newProperty.convenio_url" name="new_conv_url" type="url" /></label>
-              <label class="checkbox-label">Convenio Validado:
+              <label>Convenio URL: <span class="optional-marker">(Opcional)</span>
+                <input [(ngModel)]="newProperty.convenio_url" name="new_conv_url" type="url" />
+              </label>
+              <label class="checkbox-label">Convenio Validado: <span class="optional-marker">(Opcional)</span>
                 <input type="checkbox" [(ngModel)]="newProperty.convenio_validado" name="new_conv_val" />
               </label>
-               <label>Validado por (Agente):
+               <label>Validado por (Agente): <span class="optional-marker">(Opcional)</span>
                 <select [(ngModel)]="newProperty.validado_por_usuario_id" name="new_val_usr">
                   <option [ngValue]="null">-- Opcional --</option>
                   @for (item of catalogos['agentes']; track item.id) { <option [value]="item.id">{{ item.nombre }}</option> }
@@ -482,6 +549,19 @@
             <button type="submit" class="btn-submit" [disabled]="uploadingImages || addForm.invalid"> {{ uploadingImages ? '📤 Subiendo imágenes...' : '➕ Agregar Propiedad' }}
             </button>
              <button type="button" class="btn-cancel" (click)="cancelEdit()">❌ Cancelar</button>
+
+            @if (addForm.invalid && (addForm.touched || addForm.submitted)) {
+              <div class="alert alert-error form-validation-summary">
+                <p>Por favor corrige los siguientes campos:</p>
+                <ul>
+                  @if (tituloNewInput.invalid) { <li>Título es requerido.</li> }
+                  @if (tipoNegocioNewInput.invalid) { <li>Tipo de Negocio es requerido.</li> }
+                  @if (tipoPropiedadNewInput.invalid) { <li>Tipo de Propiedad es requerido.</li> }
+                  @if (estadoPubNewInput.invalid) { <li>Estado Publicación es requerido.</li> }
+                  @if (captadoPorNewInput.invalid) { <li>Agente (Captado por) es requerido.</li> }
+                </ul>
+              </div>
+            }
           </div>
         </form>
       </section>

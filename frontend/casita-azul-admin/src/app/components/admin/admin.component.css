@@ -61,12 +61,16 @@
   color: #667eea;
 }
 
-/* Estilos de la tabla (del archivo anterior) */
+/* === CORRECCIÓN: ESTILOS PARA TABLA SCROLLABLE === */
+/* === CORRECCIÓN: ESTILOS PARA TABLA SCROLLABLE === */
 .table-container {
-  overflow-x: auto;
+  /* overflow-x: auto;  <-- ELIMINADO */
+  max-height: 70vh; /* Altura máxima de la tabla */
+  overflow-y: auto; /* Scroll vertical SOLO si se pasa de 70vh */
   margin-bottom: 30px;
-  border-radius: 8px; /* Para que los bordes redondeados funcionen */
-  overflow: hidden; /* Para que los bordes redondeados funcionen */
+  border-radius: 8px;
+  position: relative; /* Necesario para el header pegajoso */
+  border: 1px solid #ddd; /* Añadido para enmarcar el contenedor */
 }
 table {
   width: 100%;
@@ -78,22 +82,30 @@ th, td {
   text-align: left;
   vertical-align: top;
   font-size: 14px;
+  /* white-space: nowrap; <-- ELIMINADO para permitir ajuste de texto */
 }
 th {
-  background-color: #0d47a1; /* Azul oscuro */
-  color: white; /* Texto blanco */
+  background-color: #0d47a1;
+  color: white;
   font-weight: 600;
-  border-bottom: 1px solid #0d47a1; /* Borde del mismo color */
+  position: sticky; /* Encabezado pegajoso */
+  top: 0; /* Pegar al tope del .table-container */
+  z-index: 10; /* Asegura que esté por encima del contenido */
 }
 tbody tr {
-  background-color: #e3f2fd; /* Celeste claro */
+  background-color: #e3f2fd;
 }
 tr:nth-child(even) {
-  background-color: #e3f2fd; /* Mismo celeste claro */
+  background-color: #e3f2fd;
 }
 tbody tr:hover {
-  background-color: #bbdefb; /* Celeste un poco más oscuro */
+  background-color: #bbdefb;
 }
+/* Separación para botones de acción en la tabla */
+.table-container td .btn-edit {
+  margin-right: 8px; /* Añade un margen a la derecha del botón editar */
+}
+/* ============================================== */
 
 
 /* Estilos de formulario (del archivo anterior) */
@@ -138,6 +150,7 @@ tbody tr:hover {
 }
 .property-form input[type="text"],
 .property-form input[type="number"],
+.property-form input[type="url"],
 .property-form textarea,
 .property-form select {
   width: 100%;
@@ -155,6 +168,9 @@ tbody tr:hover {
   margin-top: 25px;
   display: flex;
   gap: 10px;
+  /* CAMBIO: Añadido para alinear el error */
+  flex-wrap: wrap; 
+  align-items: center;
 }
 
 /* Estilos para la celda de imagen en la tabla */
@@ -349,7 +365,7 @@ tbody tr:hover {
 }
 
 .btn-remove-file:hover {
-  transform: scale(1.1);
+  transform: scale(1.2);
 }
 
 .info-text {
@@ -543,10 +559,16 @@ td small {
 .btn-add-property:hover { background-color: #0b5ed7; }
 
 /* Tabla Simplificada */
-.description-cell { max-width: 250px; white-space: normal; font-size: 0.9em; color: #555; line-height: 1.4; }
+.description-cell {
+  max-width: 250px;
+  white-space: normal; /* CORREGIDO: white-space normal para multilínea */
+  font-size: 0.9em;
+  color: #555;
+  line-height: 1.4;
+}
 td small { color: #777; font-size: 0.85em; display: block; margin-top: 4px; }
 /* Ajustes generales tabla si es necesario */
-.table-container { margin-bottom: 30px; }
+/* .table-container (ya estilizado arriba) */
 th, td { vertical-align: middle; }
 
 
@@ -668,4 +690,69 @@ button:disabled { cursor: not-allowed; opacity: 0.7; }
   padding: 8px 15px 8px 5px; /* Padding (top, right, bottom, left) */
   opacity: 1;
   visibility: visible; /* Lo hace visible */
+}
+
+/* === CAMBIO: ESTILOS PARA VALIDACIÓN === */
+
+/* Marcador para campos requeridos y opcionales */
+.required-marker {
+  font-size: 0.9em;
+  color: #dc3545; /* Rojo */
+  font-weight: bold;
+  margin-left: 4px;
+}
+
+.optional-marker {
+  font-size: 0.9em;
+  color: #6c757d; /* Gris */
+  font-weight: normal;
+  margin-left: 4px;
+}
+
+/* Texto de error debajo del input */
+.error-text {
+  color: #dc3545;
+  font-size: 0.85em; /* 12px */
+  font-weight: 500;
+  margin-top: 6px;
+  display: block;
+}
+
+/* Borde rojo en inputs inválidos que han sido tocados */
+.ng-invalid.ng-touched,
+.ng-invalid.ng-dirty {
+  border-color: #dc3545 !important;
+  box-shadow: 0 0 0 0.25rem rgba(220, 53, 69, 0.25) !important;
+}
+
+/* Mensaje de error general del formulario */
+.form-validation-summary {
+  margin-bottom: 0; /* Quita el margen inferior */
+  flex-grow: 1; /* Hace que ocupe el espacio restante */
+  text-align: center;
+  padding: 10px; /* Ajusta el padding */
+  margin-left: 10px; /* Añade espacio del botón */
+}
+
+/* Mensaje de error general del formulario (junto a los botones) */
+.form-validation-summary {
+  flex-basis: 100%; /* Ocupa toda la línea si es muy largo */
+  order: 3; /* Se coloca después de los botones */
+  margin-top: 15px;
+  margin-bottom: 0;
+  text-align: left;
+  padding: 10px;
+}
+
+/* Estilo para la lista de errores específicos */
+.form-validation-summary ul {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 0.9em;
+  color: #721c24; /* Hereda el color, pero lo forzamos por si acaso */
+}
+
+.form-validation-summary p {
+  margin-bottom: 8px;
+  font-weight: bold;
 }
