@@ -64,29 +64,27 @@ export class LoginComponent {
     this.registerForm.reset();
   }
 
-  onLogin(): void {
+    onLogin(): void {
     if (this.loginForm.invalid) {
-      // Marcar campos como tocados para mostrar errores si es necesario
       this.loginForm.markAllAsTouched();
       return;
     }
 
     this.loading = true;
     this.errorMessage = '';
-    this.successMessage = ''; // Limpiar mensaje de éxito
+    this.successMessage = '';
 
     const { email, password } = this.loginForm.value;
 
     this.authService.login(email, password).subscribe({
-      next: (user) => { // Ahora recibe el usuario completo
+      next: (user) => {
         this.loading = false;
-        if (user) { // Verifica que el usuario no sea null
-            this.successMessage = 'Login exitoso!';
-            // Navega inmediatamente ya que tenemos la info del usuario
-            this.router.navigate(['/admin']);
+        if (user) {
+          this.successMessage = 'Login exitoso!';
+          // CAMBIO: Redirige a dashboard en lugar de admin
+          this.router.navigate(['/dashboard']);
         } else {
-             // Caso improbable si login tiene éxito pero fetch falla y devuelve null
-             this.errorMessage = 'No se pudieron obtener los detalles del usuario.';
+          this.errorMessage = 'No se pudieron obtener los detalles del usuario.';
         }
       },
       error: (error) => {
@@ -96,6 +94,7 @@ export class LoginComponent {
       }
     });
   }
+
 
   onRegister(): void {
     if (this.registerForm.invalid) {

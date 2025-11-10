@@ -1,0 +1,283 @@
+<!-- frontend/casita-azul-admin/src/app/components/dashboard/dashboard.component.html -->
+<main class="container">
+  <header class="admin-header">
+    <h1>📊 Dashboard - Casita Azul</h1>
+    <div class="user-info">
+      @if (currentUser) {
+        <span>👤 {{ currentUser.email }}</span>
+        <a routerLink="/admin" class="btn-admin-link">🏠 Propiedades</a>
+        @if (isAdmin) {
+          <a routerLink="/admin/users" class="btn-admin-link">👥 Usuarios</a>
+          <a routerLink="/admin/agents" class="btn-admin-link">🧑‍💼 Agentes</a>
+        }
+      }
+      <button class="btn-logout" (click)="logout()">🚪 Cerrar Sesión</button>
+    </div>
+  </header>
+
+  @if (isLoading) {
+    <p class="loading-message">Cargando estadísticas...</p>
+  }
+
+  @if (errorMessage) {
+    <div class="alert alert-error">
+      <p>❌ {{ errorMessage }}</p>
+      <button (click)="loadDashboardData()">Reintentar</button>
+    </div>
+  }
+
+  @if (!isLoading && stats) {
+    <!-- Tarjetas de Resumen -->
+    <section class="stats-grid">
+      <div class="stat-card primary">
+        <div class="stat-icon">🏘️</div>
+        <div class="stat-content">
+          <h3>Total Propiedades</h3>
+          <p class="stat-value">{{ stats.total_propiedades }}</p>
+          <span class="stat-label">Activas en sistema</span>
+        </div>
+      </div>
+
+      <div class="stat-card success">
+        <div class="stat-icon">✅</div>
+        <div class="stat-content">
+          <h3>Publicadas</h3>
+          <p class="stat-value">{{ stats.propiedades_publicadas }}</p>
+          <span class="stat-label">Visibles al público</span>
+        </div>
+      </div>
+
+      <div class="stat-card info">
+        <div class="stat-icon">👁️</div>
+        <div class="stat-content">
+          <h3>Total Visitas</h3>
+          <p class="stat-value">{{ stats.total_visitas }}</p>
+          <span class="stat-label">Vistas acumuladas</span>
+        </div>
+      </div>
+
+      <div class="stat-card warning">
+        <div class="stat-icon">🆕</div>
+        <div class="stat-content">
+          <h3>Nuevas (7 días)</h3>
+          <p class="stat-value">{{ stats.propiedades_nuevas_semana }}</p>
+          <span class="stat-label">Agregadas recientemente</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Propiedad Más Visitada -->
+    @if (stats.propiedad_mas_visitada) {
+      <section class="featured-property">
+        <h2>⭐ Propiedad Más Visitada</h2>
+        <div class="featured-card">
+          <div class="featured-info">
+            <h3>{{ stats.propiedad_mas_visitada.titulo }}</h3>
+            <p>📍 {{ stats.propiedad_mas_visitada.direccion || 'Sin dirección' }}</p>
+            <p class="visits-count">👁️ {{ stats.propiedad_mas_visitada.visitas }} visitas</p>
+          </div>
+          <a routerLink="/admin" class="btn-view">Ver Propiedad</a>
+        </div>
+      </section>
+    }
+
+    <!-- Gráficos y Distribuciones -->
+    <div class="charts-grid">
+      <!-- Tipo de Negocio -->
+      <section class="chart-card">
+        <h2>📈 Por Tipo de Negocio</h2>
+        <div class="chart-content">
+          @for (item of stats.por_tipo_negocio; track item.nombre) {
+            <div class="chart-bar-container">
+              <div class="chart-label">
+                <span>{{ item.nombre }}</span>
+                <span class="chart-value">{{ item.cantidad }}</span>
+              </div>
+              <div class="chart-bar">
+                <div 
+                  class="chart-bar-fill" 
+                  [style.width.%]="getPercentage(item.cantidad, stats!.total_propiedades)">
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+      </section>
+
+      <!-- Tipo de Propiedad -->
+      <section class="chart-card">
+        <h2>🏠 Por Tipo de Propiedad</h2>
+        <div class="chart-content">
+          @for (item of stats.por_tipo_propiedad; track item.nombre) {
+            <div class="chart-bar-container">
+              <div class="chart-label">
+                <span>{{ item.nombre }}</span>
+                <span class="chart-value">{{ item.cantidad }}</span>
+              </div>
+              <div class="chart-bar">
+                <div 
+                  class="chart-bar-fill success" 
+                  [style.width.%]="getPercentage(item.cantidad, stats!.total_propiedades)">
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+      </section>
+
+      <!-- Estado de Publicación -->
+      <section class="chart-card">
+        <h2>📋 Por Estado</h2>
+        <div class="chart-content">
+          @for (item of stats.por_estado_publicacion; track item.nombre) {
+            <div class="chart-bar-container">
+              <div class="chart-label">
+                <span>{{ item.nombre }}</span>
+                <span class="chart-value">{{ item.cantidad }}</span>
+              </div>
+              <div class="chart-bar">
+                <div 
+                  class="chart-bar-fill warning" 
+                  [style.width.%]="getPercentage(item.cantidad, stats!.total_propiedades)">
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+      </section>
+
+      <!-- Top Ciudades -->
+      <section class="chart-card">
+        <h2>🌆 Top Ciudades</h2>
+        <div class="list-content">
+          @for (ciudad of stats.top_ciudades; track ciudad.ciudad; let i = $index) {
+            <div class="list-item">
+              <span class="rank">{{ i + 1 }}</span>
+              <div class="list-details">
+                <strong>{{ ciudad.ciudad }}</strong>
+                <small>{{ ciudad.estado }}</small>
+              </div>
+              <span class="badge">{{ ciudad.cantidad }}</span>
+            </div>
+          }
+        </div>
+      </section>
+    </div>
+
+    <!-- Precios -->
+    @if (stats.precios) {
+      <section class="prices-section">
+        <h2>💰 Rangos de Precios</h2>
+        <div class="prices-grid">
+          <div class="price-card">
+            <h3>Venta</h3>
+            <div class="price-details">
+              <div>
+                <label>Promedio:</label>
+                <span>{{ formatCurrency(stats.precios.precio_promedio_venta) }}</span>
+              </div>
+              <div>
+                <label>Mínimo:</label>
+                <span>{{ formatCurrency(stats.precios.precio_min_venta) }}</span>
+              </div>
+              <div>
+                <label>Máximo:</label>
+                <span>{{ formatCurrency(stats.precios.precio_max_venta) }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="price-card">
+            <h3>Alquiler</h3>
+            <div class="price-details">
+              <div>
+                <label>Promedio:</label>
+                <span>{{ formatCurrency(stats.precios.precio_promedio_alquiler) }}</span>
+              </div>
+              <div>
+                <label>Mínimo:</label>
+                <span>{{ formatCurrency(stats.precios.precio_min_alquiler) }}</span>
+              </div>
+              <div>
+                <label>Máximo:</label>
+                <span>{{ formatCurrency(stats.precios.precio_max_alquiler) }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    }
+
+    <!-- Top Agentes -->
+    @if (stats.top_agentes.length > 0) {
+      <section class="agents-section">
+        <h2>🏆 Agentes Más Productivos</h2>
+        <div class="agents-grid">
+          @for (agente of stats.top_agentes; track agente.email; let i = $index) {
+            <div class="agent-card">
+              <div class="agent-rank">{{ i + 1 }}</div>
+              <div class="agent-info">
+                <h4>{{ agente.nombre }}</h4>
+                <p>{{ agente.email }}</p>
+                <span class="agent-count">{{ agente.propiedades_captadas }} propiedades</span>
+              </div>
+            </div>
+          }
+        </div>
+      </section>
+    }
+
+    <!-- Imágenes Stats -->
+    @if (stats.imagenes) {
+      <section class="images-stats">
+        <h2>📸 Estado de Imágenes</h2>
+        <div class="images-grid">
+          <div class="image-stat-card success">
+            <div class="image-stat-icon">✅</div>
+            <div class="image-stat-content">
+              <p class="image-stat-value">{{ stats.imagenes.con_imagenes }}</p>
+              <span>Con Imágenes</span>
+            </div>
+          </div>
+          <div class="image-stat-card danger">
+            <div class="image-stat-icon">⚠️</div>
+            <div class="image-stat-content">
+              <p class="image-stat-value">{{ stats.imagenes.sin_imagenes }}</p>
+              <span>Sin Imágenes</span>
+            </div>
+          </div>
+        </div>
+      </section>
+    }
+
+    <!-- Actividad Reciente -->
+    @if (recentActivity.length > 0) {
+      <section class="recent-activity">
+        <h2>🕐 Actividad Reciente</h2>
+        <div class="activity-list">
+          @for (item of recentActivity; track item.id) {
+            <div class="activity-item">
+              <div class="activity-icon">📝</div>
+              <div class="activity-details">
+                <h4>{{ item.titulo }}</h4>
+                <p>
+                  <span class="activity-badge">{{ item.estado }}</span>
+                  @if (item.captado_por) {
+                    • Captado por: {{ item.captado_por }}
+                  }
+                </p>
+                <small>
+                  @if (item.updated_at) {
+                    Actualizado: {{ formatDate(item.updated_at) }}
+                  } @else {
+                    Creado: {{ formatDate(item.created_at) }}
+                  }
+                </small>
+              </div>
+            </div>
+          }
+        </div>
+      </section>
+    }
+  }
+</main>

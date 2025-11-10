@@ -1117,3 +1117,196 @@ if __name__ == '__main__':
     # Consider using a more production-ready server like Gunicorn/Waitress
     # and disabling debug mode for production
     app.run(debug=True, host='0.0.0.0') # Listen on all interfaces if running in Docker/cloud
+    
+    
+@app.route('/api/dashboard/stats', methods=['GET'])
+def get_dashboard_stats():
+    """Obtiene estadísticas generales del dashboard"""
+    conn = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        
+        stats = {}
+        
+        # 1. Total de propiedades activas (no eliminadas)
+        cursor.execute("""
+            SELECT COUNT(*) as total 
+            FROM propiedades 
+            WHERE deleted_at IS NULL
+        """)
+        stats['total_propiedades'] = cursor.fetchone()['total']
+        
+        # 2. Total de propiedades publicadas
+        cursor.execute("""
+            SELECT COUNT(*) as total 
+            FROM propiedades p
+            JOIN estados_publicacion ep ON p.estado_publicacion_id = ep.id
+            WHERE p.deleted_at IS NULL 
+            AND ep.nombre ILIKE '%publicad%'
+        """)
+        stats['propiedades_publicadas'] = cursor.fetchone()['total']
+        
+        # 3. Total de visitas
+        cursor.execute("""
+            SELECT COALESCE(SUM(visitas), 0) as total 
+            FROM propiedades 
+            WHERE deleted_at IS NULL
+        """)
+        stats['total_visitas'] = cursor.fetchone()['total']
+        
+        # 4. Propiedad más visitada
+        cursor.execute("""
+            SELECT id, titulo, visitas, direccion
+            FROM propiedades 
+            WHERE deleted_at IS NULL AND visitas > 0
+            ORDER BY visitas DESC 
+            LIMIT 1
+        """)
+        most_visited = cursor.fetchone()
+        stats['propiedad_mas_visitada'] = dict(most_visited) if most_visited else None
+        
+        # 5. Distribución por tipo de negocio
+        cursor.execute("""
+            SELECT tn.nombre, COUNT(p.id) as cantidad
+            FROM tipos_negocio tn
+            LEFT JOIN propiedades p ON p.tipo_negocio_id = tn.id AND p.deleted_at IS NULL
+            GROUP BY tn.id, tn.nombre
+            ORDER BY cantidad DESC
+        """)
+        stats['por_tipo_negocio'] = [dict(row) for row in cursor.fetchall()]
+        
+        # 6. Distribución por tipo de propiedad
+        cursor.execute("""
+            SELECT tp.nombre, COUNT(p.id) as cantidad
+            FROM tipos_propiedad tp
+            LEFT JOIN propiedades p ON p.tipo_propiedad_id = tp.id AND p.deleted_at IS NULL
+            GROUP BY tp.id, tp.nombre
+            ORDER BY cantidad DESC
+        """)
+        stats['por_tipo_propiedad'] = [dict(row) for row in cursor.fetchall()]
+        
+        # 7. Distribución por estado de publicación
+        cursor.execute("""
+            SELECT ep.nombre, COUNT(p.id) as cantidad
+            FROM estados_publicacion ep
+            LEFT JOIN propiedades p ON p.estado_publicacion_id = ep.id AND p.deleted_at IS NULL
+            GROUP BY ep.id, ep.nombre
+            ORDER BY cantidad DESC
+        """)
+        stats['por_estado_publicacion'] = [dict(row) for row in cursor.fetchall()]
+        
+        # 8. Top 5 ciudades con más propiedades
+        cursor.execute("""
+            SELECT c.nombre as ciudad, e.nombre as estado, COUNT(p.id) as cantidad
+            FROM ciudades c
+            LEFT JOIN propiedades p ON p.ciudad_id = c.id AND p.deleted_at IS NULL
+            LEFT JOIN estados e ON c.estado_id = e.id
+            GROUP BY c.id, c.nombre, e.nombre
+            HAVING COUNT(p.id) > 0
+            ORDER BY cantidad DESC
+            LIMIT 5
+        """)
+        stats['top_ciudades'] = [dict(row) for row in cursor.fetchall()]
+        
+        # 9. Agentes más productivos (que han captado más propiedades)
+        cursor.execute("""
+            SELECT a.nombre, a.email, COUNT(p.id) as propiedades_captadas
+            FROM agentes a
+            LEFT JOIN propiedades p ON p.captado_por_agente_id = a.id AND p.deleted_at IS NULL
+            GROUP BY a.id, a.nombre, a.email
+            HAVING COUNT(p.id) > 0
+            ORDER BY propiedades_captadas DESC
+            LIMIT 5
+        """)
+        stats['top_agentes'] = [dict(row) for row in cursor.fetchall()]
+        
+        # 10. Rango de precios promedio
+        cursor.execute("""
+            SELECT 
+                ROUND(AVG(precio), 2) as precio_promedio_venta,
+                ROUND(AVG(precio_alquiler), 2) as precio_promedio_alquiler,
+                MIN(precio) as precio_min_venta,
+                MAX(precio) as precio_max_venta,
+                MIN(precio_alquiler) as precio_min_alquiler,
+                MAX(precio_alquiler) as precio_max_alquiler
+            FROM propiedades 
+            WHERE deleted_at IS NULL
+        """)
+        precios = cursor.fetchone()
+        stats['precios'] = dict(precios) if precios else None
+        
+        # 11. Propiedades agregadas recientemente (últimos 7 días)
+        cursor.execute("""
+            SELECT COUNT(*) as total
+            FROM propiedades 
+            WHERE deleted_at IS NULL 
+            AND created_at >= NOW() - INTERVAL '7 days'
+        """)
+        stats['propiedades_nuevas_semana'] = cursor.fetchone()['total']
+        
+        # 12. Propiedades con imágenes vs sin imágenes
+        cursor.execute("""
+            SELECT 
+                COUNT(DISTINCT CASE WHEN pi.id IS NOT NULL THEN p.id END) as con_imagenes,
+                COUNT(DISTINCT CASE WHEN pi.id IS NULL THEN p.id END) as sin_imagenes
+            FROM propiedades p
+            LEFT JOIN propiedades_imagenes pi ON p.id = pi.propiedad_id
+            WHERE p.deleted_at IS NULL
+        """)
+        imagenes_stats = cursor.fetchone()
+        stats['imagenes'] = dict(imagenes_stats) if imagenes_stats else None
+        
+        cursor.close()
+        return jsonify(stats)
+        
+    except Exception as e:
+        print(f"Error obteniendo estadísticas del dashboard: {e}")
+        return jsonify({"error": str(e)}), 500
+    finally:
+        if conn:
+            conn.close()
+
+
+@app.route('/api/dashboard/recent-activity', methods=['GET'])
+def get_recent_activity():
+    """Obtiene actividad reciente (últimas 10 propiedades modificadas)"""
+    conn = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        
+        cursor.execute("""
+            SELECT 
+                p.id,
+                p.titulo,
+                p.created_at,
+                p.updated_at,
+                a.nombre as captado_por,
+                ep.nombre as estado
+            FROM propiedades p
+            LEFT JOIN agentes a ON p.captado_por_agente_id = a.id
+            LEFT JOIN estados_publicacion ep ON p.estado_publicacion_id = ep.id
+            WHERE p.deleted_at IS NULL
+            ORDER BY COALESCE(p.updated_at, p.created_at) DESC
+            LIMIT 10
+        """)
+        
+        recent = [dict(row) for row in cursor.fetchall()]
+        cursor.close()
+        
+        # Convertir datetimes a strings
+        for item in recent:
+            if item.get('created_at'):
+                item['created_at'] = item['created_at'].isoformat()
+            if item.get('updated_at'):
+                item['updated_at'] = item['updated_at'].isoformat()
+        
+        return jsonify(recent)
+        
+    except Exception as e:
+        print(f"Error obteniendo actividad reciente: {e}")
+        return jsonify({"error": str(e)}), 500
+    finally:
+        if conn:
+            conn.close()

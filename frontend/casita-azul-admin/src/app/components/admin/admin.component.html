@@ -8,6 +8,7 @@
       </div>
       @if (currentUser) {
         <span>👤 {{ currentUser.email }}</span>
+        <a routerLink="/dashboard" class="btn-admin-link">📊 Dashboard</a>
         @if (isAdmin) {
           <a routerLink="/admin/users" class="btn-admin-link">👥 Gestionar Usuarios</a>
           <a routerLink="/admin/agents" class="btn-admin-link">🧑‍💼 Gestionar Agentes</a>
@@ -16,6 +17,7 @@
       <button class="btn-logout" (click)="logout()">🚪 Cerrar Sesión</button>
     </div>
   </header>
+
 
   @if (isLoading) {
     <p class="loading-message">Cargando datos...</p>
