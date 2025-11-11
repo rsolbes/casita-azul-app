@@ -72,7 +72,7 @@ def init_connections():
         db_user = os.getenv("DB_USER")
         db_password = os.getenv("PASSWORD")
         db_host = os.getenv("HOST")
-        db_port = os.getenv("PORT", "6543")
+        db_port = os.getenv("DB_PORT", "6543")  # Cambiado de PORT a DB_PORT
         db_name = os.getenv("DBNAME")
         
         print(f"🔍 Intentando conectar a PostgreSQL:")
@@ -114,7 +114,7 @@ def init_connections():
         print(f"❌ Mensaje: {str(e)}")
         print(f"❌ DB_USER: {os.getenv('DB_USER', '[NOT SET]')}")
         print(f"❌ HOST: {os.getenv('HOST', '[NOT SET]')}")
-        print(f"❌ PORT: {os.getenv('PORT', '[NOT SET]')}")
+        print(f"❌ DB_PORT: {os.getenv('DB_PORT', '[NOT SET - using default 6543]')}")
         print(f"❌ DBNAME: {os.getenv('DBNAME', '[NOT SET]')}")
         print(f"❌ PASSWORD: {'[CONFIGURED]' if os.getenv('PASSWORD') else '[NOT SET]'}")
         import traceback
@@ -270,7 +270,7 @@ def debug_config():
             "DB_USER": "✅ Configured" if os.getenv("DB_USER") else "❌ Missing",
             "PASSWORD": "✅ Configured" if os.getenv("PASSWORD") else "❌ Missing",
             "HOST": os.getenv("HOST", "❌ Missing"),
-            "PORT": os.getenv("PORT", "❌ Missing"),
+            "DB_PORT": os.getenv("DB_PORT", "❌ Missing (using default: 6543)"),
             "DBNAME": os.getenv("DBNAME", "❌ Missing"),
             "SUPABASE_URL": "✅ Configured" if os.getenv("SUPABASE_URL") else "❌ Missing",
             "SUPABASE_ANON_KEY": "✅ Configured" if os.getenv("SUPABASE_ANON_KEY") else "❌ Missing",
