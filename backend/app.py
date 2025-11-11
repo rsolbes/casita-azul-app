@@ -72,7 +72,7 @@ def init_connections():
         db_user = os.getenv("DB_USER")
         db_password = os.getenv("PASSWORD")
         db_host = os.getenv("HOST")
-        db_port = os.getenv("DB_PORT", "6543")  # Cambiado de PORT a DB_PORT
+        db_port = os.getenv("DB_PORT", "6543")
         db_name = os.getenv("DBNAME")
         
         print(f"🔍 Intentando conectar a PostgreSQL:")
@@ -80,23 +80,25 @@ def init_connections():
         print(f"   Port: {db_port}")
         print(f"   User: {db_user}")
         print(f"   Database: {db_name}")
+        print(f"   Mode: Session Pooler")
         print(f"   Password: {'[CONFIGURED]' if db_password else '[MISSING]'}")
         
         if not all([db_user, db_password, db_host, db_name]):
-            raise ValueError(f"Faltan variables de entorno requeridas: DB_USER={bool(db_user)}, PASSWORD={bool(db_password)}, HOST={bool(db_host)}, DBNAME={bool(db_name)}")
+            raise ValueError(f"Faltan variables de entorno requeridas")
         
         _db_pool = pool.ThreadedConnectionPool(
             1,  # min connections
-            5,  # max connections
+            3,  # max connections (bajo para Session Pooler)
             user=db_user,
             password=db_password,
             host=db_host,
             port=db_port,
             dbname=db_name,
             sslmode='require',
-            connect_timeout=30  # 30 second timeout (increased from 10)
+            connect_timeout=60,  # 60 segundos para Session Pooler
+            options='-c statement_timeout=30000'  # 30 segundos por query
         )
-        print("✅ Database pool creado (1-5 conexiones)")
+        print("✅ Database pool creado (1-3 conexiones)")
         
         # Test the connection
         print("🔍 Probando conexión...")
@@ -112,11 +114,10 @@ def init_connections():
         print(f"❌ ERROR CRÍTICO creando pool de base de datos:")
         print(f"❌ Tipo de error: {type(e).__name__}")
         print(f"❌ Mensaje: {str(e)}")
-        print(f"❌ DB_USER: {os.getenv('DB_USER', '[NOT SET]')}")
-        print(f"❌ HOST: {os.getenv('HOST', '[NOT SET]')}")
-        print(f"❌ DB_PORT: {os.getenv('DB_PORT', '[NOT SET - using default 6543]')}")
-        print(f"❌ DBNAME: {os.getenv('DBNAME', '[NOT SET]')}")
-        print(f"❌ PASSWORD: {'[CONFIGURED]' if os.getenv('PASSWORD') else '[NOT SET]'}")
+        print(f"❌ Host: {os.getenv('HOST', '[NOT SET]')}")
+        print(f"❌ Port: {os.getenv('DB_PORT', '[NOT SET]')}")
+        print(f"⚠️  SOLUCIÓN: Verifica que uses Session Pooler, NO Transaction Pooler")
+        print(f"⚠️  Si el problema persiste, considera el IPv4 Add-on ($4/mes)")
         import traceback
         traceback.print_exc()
         _db_pool = None
