@@ -46,7 +46,7 @@ export interface RecentActivity {
   providedIn: 'root'
 })
 export class DashboardService {
-  private apiUrl = 'http://localhost:5000/api/dashboard';
+  private apiUrl = 'https://casita-azul-app.onrender.com/api/dashboard';
 
   constructor(private http: HttpClient) {}
 

@@ -106,7 +106,7 @@ export interface CatalogosApiResponse {
 })
 export class PropertyService {
   // Asegúrate que esta URL apunte a tu backend Flask
-  private apiUrl = 'https://casita-azul-backend.onrender.com/api';
+  private apiUrl = 'https://casita-azul-app.onrender.com/api';
   
   constructor(private http: HttpClient) {}
 

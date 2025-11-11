@@ -25,7 +25,7 @@ interface AuthResponse {
   providedIn: 'root'
 })
 export class AuthService {
-  private apiUrl = 'https://casita-azul-backend.onrender.com/api';
+  private apiUrl = 'https://casita-azul-app.onrender.com/api';
   // Tipa explícitamente el BehaviorSubject
   private currentUserSubject = new BehaviorSubject<User | null>(null);
   public currentUser$ = this.currentUserSubject.asObservable();

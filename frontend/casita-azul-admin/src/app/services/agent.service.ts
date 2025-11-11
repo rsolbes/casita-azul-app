@@ -14,7 +14,7 @@ export interface Agent {
   providedIn: 'root'
 })
 export class AgentService {
-  private apiUrl = 'http://localhost:5000/api/agentes'; // Base URL for agent actions
+  private apiUrl = 'https://casita-azul-app.onrender.com/api/agentes';
 
   constructor(private http: HttpClient) {}
 

@@ -15,7 +15,7 @@ export interface AdminUser {
   providedIn: 'root'
 })
 export class AdminService {
-  private apiUrl = 'https://casita-azul-backend.onrender.com/api';
+  private apiUrl = 'https://casita-azul-app.onrender.com/api';
 
   constructor(private http: HttpClient) {}
 
