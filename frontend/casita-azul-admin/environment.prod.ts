@@ -1,4 +1,4 @@
 export const environment = {
   production: true,
-  apiUrl: 'https://casita-azul-backend.onrender.com/api'
+  apiUrl: 'https://casita-azul-app.onrender.com/api'
 };

@@ -28,20 +28,6 @@ CORS(
         }
     }
 )
-
-@app.before_request
-def handle_preflight():
-    from flask import request
-    if request.method == "OPTIONS":
-        response = app.make_default_options_response()
-        origin = request.headers.get('Origin')
-        if origin in origins_list:
-            response.headers['Access-Control-Allow-Origin'] = origin
-            response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS, PATCH'
-            response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
-            response.headers['Access-Control-Allow-Credentials'] = 'true'
-            response.headers['Access-Control-Max-Age'] = '3600'
-        return response
     
     
 print(f"✅ Orígenes CORS permitidos: {origins_list}")
@@ -66,7 +52,6 @@ if SUPABASE_SERVICE_KEY:
         print("✅ Admin client configurado")
     except Exception as e:
         print(f"⚠️  No se pudo configurar admin client: {e}") 
-supabase_admin: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 
 # Configuración de Storage
 BUCKET_NAME = "imagenes casas" # Asegúrate que este sea el nombre correcto de tu bucket
