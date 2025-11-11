@@ -120,6 +120,40 @@ def is_admin(user_id: str) -> bool:
             conn.close()
 # --- End Helper Functions ---
 
+@app.route('/health', methods=['GET'])
+def health_check():
+    """Endpoint para verificar que el servidor está funcionando"""
+    return jsonify({
+        "status": "ok",
+        "message": "Backend is running",
+        "cors_origins": origins_list
+    }), 200
+
+@app.route('/api/health', methods=['GET'])
+def api_health_check():
+    """Health check con verificación de base de datos"""
+    conn = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT 1")
+        cursor.close()
+        db_status = "connected"
+    except Exception as e:
+        db_status = f"error: {str(e)}"
+    finally:
+        if conn:
+            conn.close()
+    
+    return jsonify({
+        "status": "ok",
+        "database": db_status,
+        "supabase_url": SUPABASE_URL,
+        "cors_origins": origins_list
+    }), 200
+    
+    
+
 
 @app.route('/api/register', methods=['POST', 'OPTIONS'])
 def register():
