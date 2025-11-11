@@ -2,15 +2,19 @@ import os
 import uuid
 from datetime import datetime
 import psycopg2
-from psycopg2.extras import RealDictCursor # Added for is_admin
-from flask import Flask, jsonify, request # request was already here, ensure RealDictCursor is imported
+from psycopg2 import pool
+from psycopg2.extras import RealDictCursor
+from flask import Flask, jsonify, request
 from flask_cors import CORS
 from supabase import create_client, Client
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
+
 load_dotenv()
 
 app = Flask(__name__)
+
+# CORS Configuration
 CORS_ORIGINS = os.getenv(
     "CORS_ORIGINS",
     "https://app-externos.netlify.app,https://casita-azul-admin.netlify.app,http://localhost:4200,http://localhost:50687"
@@ -24,65 +28,114 @@ CORS(
             "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
             "allow_headers": ["Content-Type", "Authorization"],
             "supports_credentials": True,
-            "max_age": 3600  # Cache preflight por 1 hora
+            "max_age": 3600
         }
     }
 )
-    
-    
+
 print(f"✅ Orígenes CORS permitidos: {origins_list}")
 
+# --- LAZY-LOADED GLOBALS ---
+_supabase_client = None
+_supabase_admin_client = None
+_db_pool = None
 
-# Configuración de Supabase
-SUPABASE_URL = "https://izozjytmktbuhpttczid.supabase.co" # Reemplaza si es diferente
-SUPABASE_URL = os.getenv("SUPABASE_URL", "https://izozjytmktbuhpttczid.supabase.co")
-SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY")
+def get_supabase_client():
+    """Lazy load Supabase client"""
+    global _supabase_client
+    if _supabase_client is None:
+        SUPABASE_URL = os.getenv("SUPABASE_URL", "https://izozjytmktbuhpttczid.supabase.co")
+        SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY")
+        if not SUPABASE_ANON_KEY:
+            raise ValueError("SUPABASE_ANON_KEY no está configurada")
+        _supabase_client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
+        print("✅ Supabase client inicializado")
+    return _supabase_client
 
-if not SUPABASE_ANON_KEY:
-    raise ValueError("SUPABASE_ANON_KEY no está configurada")
+def get_supabase_admin():
+    """Lazy load Supabase admin client"""
+    global _supabase_admin_client
+    if _supabase_admin_client is None:
+        SUPABASE_URL = os.getenv("SUPABASE_URL", "https://izozjytmktbuhpttczid.supabase.co")
+        SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
+        if not SUPABASE_SERVICE_KEY:
+            return None
+        try:
+            _supabase_admin_client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+            print("✅ Admin client configurado")
+        except Exception as e:
+            print(f"⚠️  No se pudo configurar admin client: {e}")
+            return None
+    return _supabase_admin_client
 
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
+def get_db_pool():
+    """Get or create database connection pool"""
+    global _db_pool
+    if _db_pool is None:
+        try:
+            _db_pool = pool.ThreadedConnectionPool(
+                1,  # min connections
+                3,  # max connections (reduced for free tier)
+                user=os.getenv("DB_USER", "postgres.izozjytmktbuhpttczid"),
+                password=os.getenv("PASSWORD", "bddingsoftware123"),
+                host=os.getenv("HOST", "aws-1-us-east-2.pooler.supabase.com"),
+                port=os.getenv("PORT", "6543"),
+                dbname=os.getenv("DBNAME", "postgres"),
+                sslmode='require'
+            )
+            print("✅ Database pool creado")
+        except Exception as e:
+            print(f"❌ Error creando pool de base de datos: {e}")
+            raise
+    return _db_pool
 
-# Solo crea admin client si existe la key
-SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
-supabase_admin = None
-if SUPABASE_SERVICE_KEY:
+def get_db_connection():
+    """Get a connection from the pool"""
     try:
-        supabase_admin = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
-        print("✅ Admin client configurado")
+        db_pool = get_db_pool()
+        conn = db_pool.getconn()
+        return conn
     except Exception as e:
-        print(f"⚠️  No se pudo configurar admin client: {e}") 
+        print(f"Error obteniendo conexión del pool: {e}")
+        # Fallback to direct connection if pool fails
+        return psycopg2.connect(
+            user=os.getenv("DB_USER", "postgres.izozjytmktbuhpttczid"),
+            password=os.getenv("PASSWORD", "bddingsoftware123"),
+            host=os.getenv("HOST", "aws-1-us-east-2.pooler.supabase.com"),
+            port=os.getenv("PORT", "6543"),
+            dbname=os.getenv("DBNAME", "postgres"),
+            sslmode='require'
+        )
 
-# Configuración de Storage
-BUCKET_NAME = "imagenes casas" # Asegúrate que este sea el nombre correcto de tu bucket
+def return_db_connection(conn):
+    """Return connection to the pool"""
+    try:
+        if _db_pool:
+            _db_pool.putconn(conn)
+        else:
+            conn.close()
+    except Exception as e:
+        print(f"Error retornando conexión al pool: {e}")
+        if conn:
+            conn.close() 
+
+# Storage Configuration
+BUCKET_NAME = "imagenes casas"
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-# Conexión a Base de Datos (directa para operaciones específicas)
-def get_db_connection():
-    conn = psycopg2.connect(
-        user=os.getenv("DB_USER", "postgres.izozjytmktbuhpttczid"),
-        password=os.getenv("PASSWORD", "bddingsoftware123"), # Asegúrate que esto esté en tu .env real
-        host=os.getenv("HOST", "aws-1-us-east-2.pooler.supabase.com"),
-        port=os.getenv("PORT", "6543"),
-        dbname=os.getenv("DBNAME", "postgres"),
-        sslmode='require'
-    )
-    return conn
-
-# --- Funciones Auxiliares para Roles de Admin ---
+# --- Helper Functions ---
 def get_user_id_from_token(request):
     """Extrae el user ID del token de autorización."""
     auth_header = request.headers.get('Authorization')
     if not auth_header or not auth_header.startswith('Bearer '):
         raise Exception("No token provided")
     token = auth_header.split(' ')[1]
-    # Use the regular (anon key) client to verify the token initially
-    user_response = supabase.auth.get_user(token)
+    user_response = get_supabase_client().auth.get_user(token)
     if not user_response or not user_response.user:
-         raise Exception("Invalid token")
+        raise Exception("Invalid token")
     return user_response.user.id
 
 def is_admin(user_id: str) -> bool:
@@ -90,7 +143,6 @@ def is_admin(user_id: str) -> bool:
     try:
         conn = get_db_connection()
         cursor = conn.cursor(cursor_factory=RealDictCursor)
-        # Query the profiles table to get the role
         cursor.execute("SELECT role FROM public.profiles WHERE id = %s", (user_id,))
         profile = cursor.fetchone()
         cursor.close()
@@ -102,9 +154,9 @@ def is_admin(user_id: str) -> bool:
         return False
     finally:
         if conn:
-            conn.close()
-# --- End Helper Functions ---
+            return_db_connection(conn)
 
+# --- Health Check Endpoints ---
 @app.route('/health', methods=['GET'])
 def health_check():
     """Endpoint para verificar que el servidor está funcionando"""
@@ -128,18 +180,16 @@ def api_health_check():
         db_status = f"error: {str(e)}"
     finally:
         if conn:
-            conn.close()
+            return_db_connection(conn)
     
     return jsonify({
         "status": "ok",
         "database": db_status,
-        "supabase_url": SUPABASE_URL,
+        "supabase_url": os.getenv("SUPABASE_URL", "https://izozjytmktbuhpttczid.supabase.co"),
         "cors_origins": origins_list
     }), 200
-    
-    
 
-
+# --- Authentication Endpoints ---
 @app.route('/api/register', methods=['POST', 'OPTIONS'])
 def register():
     if request.method == 'OPTIONS':
@@ -149,16 +199,13 @@ def register():
         data = request.get_json()
         email = data.get('email')
         password = data.get('password')
-        role = data.get('role', 'user') # Get role from request, default to 'user'
+        role = data.get('role', 'user')
 
-        # Use Supabase Auth for registration
-        response = supabase.auth.sign_up({
+        response = get_supabase_client().auth.sign_up({
             "email": email,
             "password": password
         })
 
-        # --- Set the role in public.profiles ---
-        # Note: This happens AFTER signup. Consider a trigger or edge function for atomicity.
         if response.user:
             new_user_id = response.user.id
             conn = None
@@ -173,11 +220,9 @@ def register():
                 cursor.close()
             except Exception as db_error:
                 print(f"Error setting profile role during registration for {new_user_id}: {db_error}")
-                # Log this error, user exists but profile might not be set correctly
             finally:
                 if conn:
-                    conn.close()
-        # --- End Role Setting ---
+                    return_db_connection(conn)
 
         return jsonify({
             "status": "success",
@@ -186,11 +231,9 @@ def register():
 
     except Exception as e:
         print(f"Error en registro: {e}")
-        # Consider more specific error handling based on Supabase exceptions
         if "already registered" in str(e):
-             return jsonify({"error": "Email already registered"}), 409
+            return jsonify({"error": "Email already registered"}), 409
         return jsonify({"error": str(e)}), 400
-
 
 @app.route('/api/login', methods=['POST', 'OPTIONS'])
 def login():
@@ -202,8 +245,7 @@ def login():
         email = data.get('email')
         password = data.get('password')
 
-        # Use Supabase Auth for login
-        response = supabase.auth.sign_in_with_password({
+        response = get_supabase_client().auth.sign_in_with_password({
             "email": email,
             "password": password
         })
@@ -214,7 +256,6 @@ def login():
             "user": {
                 "id": response.user.id,
                 "email": response.user.email
-                # You might want to fetch and include the role here as well
             }
         }), 200
 
@@ -228,17 +269,15 @@ def logout():
         return '', 204
 
     try:
-        # It's better to invalidate the token provided by the client
         auth_header = request.headers.get('Authorization')
         token = None
         if auth_header and auth_header.startswith('Bearer '):
             token = auth_header.split(' ')[1]
 
         if token:
-            supabase.auth.sign_out(token) # Pass the specific token to sign out
+            get_supabase_client().auth.sign_out(token)
         else:
-             # Fallback if no token provided (less secure, depends on Supabase client state)
-             supabase.auth.sign_out()
+            get_supabase_client().auth.sign_out()
 
         return jsonify({"status": "success"}), 200
     except Exception as e:
@@ -251,17 +290,15 @@ def get_user():
         return '', 204
 
     try:
-        # Get token from Authorization header
         auth_header = request.headers.get('Authorization')
         if not auth_header or not auth_header.startswith('Bearer '):
             return jsonify({"error": "No token provided"}), 401
 
         token = auth_header.split(' ')[1]
-        user_response = supabase.auth.get_user(token)
+        user_response = get_supabase_client().auth.get_user(token)
         user = user_response.user
 
-        # Fetch role from profiles table
-        role = 'user' # Default role
+        role = 'user'
         conn = None
         try:
             conn = get_db_connection()
@@ -275,13 +312,12 @@ def get_user():
             print(f"Error fetching role for user {user.id}: {db_error}")
         finally:
             if conn:
-                conn.close()
-
+                return_db_connection(conn)
 
         return jsonify({
             "id": user.id,
             "email": user.email,
-            "role": role # Include the role
+            "role": role
         }), 200
 
     except Exception as e:
@@ -299,29 +335,22 @@ def refresh():
         if not refresh_token:
             return jsonify({"error": "Refresh token required"}), 400
 
-        response = supabase.auth.refresh_session(refresh_token)
+        response = get_supabase_client().auth.refresh_session(refresh_token)
 
-        # Check if response.session is None which indicates an error
         if not response.session:
-             # Attempt to extract error details if available from Supabase client's error handling
-             error_message = "Invalid refresh token or session expired"
-             # In newer versions, the error might be raised directly,
-             # so this check might not be needed if the outer try/except catches it.
-             return jsonify({"error": error_message}), 401
-
+            error_message = "Invalid refresh token or session expired"
+            return jsonify({"error": error_message}), 401
 
         return jsonify({
             "access_token": response.session.access_token,
-            "refresh_token": response.session.refresh_token # Supabase might issue a new refresh token
+            "refresh_token": response.session.refresh_token
         }), 200
 
     except Exception as e:
         print(f"Error en refresh: {e}")
-        # Be more specific if possible based on Supabase client errors
         return jsonify({"error": "Failed to refresh token: " + str(e)}), 401
 
-
-# --- Endpoint de Catálogos ---
+# --- Catalogos Endpoint ---
 @app.route('/api/catalogos', methods=['GET'])
 def get_catalogos():
     catalogos = {}
@@ -337,22 +366,15 @@ def get_catalogos():
         ]
         
         for tabla in tablas_catalogo:
-            
-            # --- INICIO DE LA MODIFICACIÓN ---
             if tabla == 'ciudades':
-                # Query especial para ciudades para incluir estado_id
                 cursor.execute("SELECT id, nombre, estado_id FROM public.ciudades ORDER BY nombre ASC;")
             elif tabla == 'agentes':
-                # Los agentes se manejan por separado más abajo
                 continue
             else:
-                # Query estándar para las demás tablas
                 cursor.execute(f"SELECT id, nombre FROM public.{tabla} ORDER BY nombre ASC;")
-            # --- FIN DE LA MODIFICACIÓN ---
             
             catalogos[tabla] = cursor.fetchall()
             
-        # El query de agentes se mantiene como estaba en tu original
         cursor.execute("SELECT id, nombre, email, telefono FROM public.agentes ORDER BY nombre ASC;")
         catalogos['agentes'] = cursor.fetchall()
 
@@ -364,22 +386,16 @@ def get_catalogos():
         return jsonify({"error": str(e)}), 500
     finally:
         if conn:
-            conn.close()
+            return_db_connection(conn)
 
-# --- Endpoints de Propiedades ---
+# --- Properties Endpoints ---
 @app.route('/api/propiedades', methods=['GET'])
 def get_properties():
     conn = None
     try:
-        # --- INICIO DE CAMBIOS ---
-        # 1. Obtener parámetros de filtro de la URL
         tipo_negocio_id = request.args.get('tipo_negocio_id')
-        
-        # Cambiamos 'ne' (Not Equal) por 'not_in' (No incluir)
-        # Esperará un string de IDs separados por coma, ej: "2,3,4"
-        estado_publicacion_id_not_in_str = request.args.get('estado_publicacion_id__not_in') 
+        estado_publicacion_id_not_in_str = request.args.get('estado_publicacion_id__not_in')
 
-        # 2. Construir la consulta base (sin cambios)
         query = """
             SELECT p.*,
                    json_agg(
@@ -395,45 +411,32 @@ def get_properties():
             LEFT JOIN propiedades_imagenes pi ON p.id = pi.propiedad_id
         """
 
-        # 3. Preparar filtros y parámetros
-        filters = ["p.deleted_at IS NULL"] # Siempre excluir borrados lógicos
+        filters = ["p.deleted_at IS NULL"]
         params = []
 
-        # Añadir filtro por tipo_negocio_id si se proporciona
         if tipo_negocio_id:
             filters.append("p.tipo_negocio_id = %s")
             params.append(tipo_negocio_id)
 
-        # Añadir filtro para excluir una LISTA de estados de publicación
         if estado_publicacion_id_not_in_str:
             try:
-                # Convertir el string "2,3,4" en una tupla de enteros (2, 3, 4)
                 excluded_ids = tuple(int(id) for id in estado_publicacion_id_not_in_str.split(','))
                 if excluded_ids:
-                    # Usar el operador 'NOT IN' de SQL
-                    # '%s' aquí se expandirá a la tupla de IDs
                     filters.append("p.estado_publicacion_id NOT IN %s")
                     params.append(excluded_ids)
             except ValueError:
-                # Ignorar el filtro si no es válido (ej. "a,b,c")
                 print(f"Filtro 'estado_publicacion_id__not_in' inválido: {estado_publicacion_id_not_in_str}")
 
-
-        # 4. Añadir filtros a la consulta
         if filters:
             query += " WHERE " + " AND ".join(filters)
 
-        # 5. Añadir GROUP BY y ORDER BY (sin cambios)
         query += """
             GROUP BY p.id
             ORDER BY p.id DESC;
         """
-        # --- FIN DE CAMBIOS ---
 
         conn = get_db_connection()
         cursor = conn.cursor(cursor_factory=RealDictCursor)
-
-        # Ejecutar la consulta con los parámetros (importante pasar params como tupla)
         cursor.execute(query, tuple(params))
         propiedades = cursor.fetchall()
         cursor.close()
@@ -443,7 +446,7 @@ def get_properties():
         return jsonify({"error": str(e)}), 500
     finally:
         if conn:
-            conn.close()
+            return_db_connection(conn)
 
 @app.route('/api/propiedades/<int:id>', methods=['GET'])
 def get_property(id):
@@ -482,7 +485,7 @@ def get_property(id):
         return jsonify({"error": str(e)}), 500
     finally:
         if conn:
-            conn.close()
+            return_db_connection(conn)
 
 @app.route('/api/propiedades', methods=['POST'])
 def add_property():
@@ -541,7 +544,7 @@ def add_property():
         return jsonify({"error": str(e)}), 500
     finally:
         if conn:
-            conn.close()
+            return_db_connection(conn)
 
 @app.route('/api/propiedades/<int:id>', methods=['PUT'])
 def update_property(id):
@@ -594,7 +597,7 @@ def update_property(id):
         return jsonify({"error": str(e)}), 500
     finally:
         if conn:
-            conn.close()
+            return_db_connection(conn)
 
 @app.route('/api/propiedades/<int:id>', methods=['DELETE'])
 def delete_property(id):
@@ -616,7 +619,7 @@ def delete_property(id):
         return jsonify({"error": str(e)}), 500
     finally:
         if conn:
-            conn.close()
+            return_db_connection(conn)
 
 # --- Endpoints de Imágenes ---
 @app.route('/api/propiedades/<int:propiedad_id>/imagenes', methods=['POST'])
@@ -647,14 +650,14 @@ def upload_image(propiedad_id):
         file_content = file.read()
 
         # Subir a Supabase Storage
-        supabase.storage.from_(BUCKET_NAME).upload(
+        get_supabase_client().storage.from_(BUCKET_NAME).upload(
             file_path,
             file_content,
             file_options={"content-type": file.content_type}
         )
 
         # Obtener URL pública
-        public_url = supabase.storage.from_(BUCKET_NAME).get_public_url(file_path)
+        public_url = get_supabase_client().storage.from_(BUCKET_NAME).get_public_url(file_path)
 
         # Guardar referencia en la base de datos
         conn = get_db_connection()
@@ -704,7 +707,7 @@ def upload_image(propiedad_id):
         return jsonify({"error": str(e)}), 500
     finally:
         if conn:
-            conn.close()
+            return_db_connection(conn)
 
 @app.route('/api/propiedades/<int:propiedad_id>/imagenes/<int:imagen_id>', methods=['DELETE'])
 def delete_image(propiedad_id, imagen_id):
@@ -729,7 +732,7 @@ def delete_image(propiedad_id, imagen_id):
         # Eliminar de Supabase Storage
         file_path = f"propiedades/{imagen['nombre_archivo']}"
         try:
-            supabase.storage.from_(BUCKET_NAME).remove([file_path])
+            get_supabase_client().storage.from_(BUCKET_NAME).remove([file_path])
         except Exception as storage_e:
             # Log error but continue to delete DB record
             print(f"Error deleting from storage (continuing): {storage_e}")
@@ -756,7 +759,7 @@ def delete_image(propiedad_id, imagen_id):
         return jsonify({"error": str(e)}), 500
     finally:
         if conn:
-            conn.close()
+            return_db_connection(conn)
 
 @app.route('/api/propiedades/<int:propiedad_id>/imagenes/<int:imagen_id>/principal', methods=['PUT'])
 def set_principal_image(propiedad_id, imagen_id):
@@ -793,7 +796,7 @@ def set_principal_image(propiedad_id, imagen_id):
         return jsonify({"error": str(e)}), 500
     finally:
         if conn:
-            conn.close()
+            return_db_connection(conn)
 
 
 # --- START: User Management Endpoints (Admin Only) ---
@@ -840,7 +843,7 @@ def admin_list_users():
             return jsonify({"error": f"Database error: {str(db_e)}"}), 500
         finally:
             if conn:
-                conn.close()
+                return_db_connection(conn)
     except Exception as e:
         print(f"Error listing users: {e}")
         # Differentiate between auth errors (401/403) and server errors (500)
@@ -866,7 +869,7 @@ def admin_create_user():
              return jsonify({"error": "Email and password required"}), 400
 
         # Create user using admin client
-        response = supabase_admin.auth.admin.create_user({
+        response = get_supabase_admin().auth.admin.create_user({
              "email": email,
              "password": password,
              "email_confirm": True # Automatically confirm email for admin-created users
@@ -890,7 +893,7 @@ def admin_create_user():
              # If profile insert fails, DELETE the user we just created in auth.users
              print(f"Error inserting profile for new user {new_user.id}. Attempting to delete auth user. Error: {db_error}")
              try:
-                 supabase_admin.auth.admin.delete_user(new_user.id)
+                 get_supabase_admin().auth.admin.delete_user(new_user.id)
                  print(f"Successfully deleted auth user {new_user.id} after profile insert failure.")
              except Exception as delete_error:
                  print(f"CRITICAL: Failed to delete auth user {new_user.id} after profile insert failure. Manual cleanup needed. Error: {delete_error}")
@@ -898,7 +901,7 @@ def admin_create_user():
              return jsonify({"error": f"Failed to set user role in profile: {db_error}"}), 500
         finally:
             if conn:
-                conn.close()
+                return_db_connection(conn)
         # --- End Role Setting ---
 
         return jsonify(new_user.model_dump()), 201 # Usa model_dump() en lugar de dict()
@@ -927,7 +930,7 @@ def admin_delete_user(user_id):
 
         # Delete user using admin client
         # This automatically cascades to your profiles table due to ON DELETE CASCADE
-        supabase_admin.auth.admin.delete_user(user_id)
+        get_supabase_admin().auth.admin.delete_user(user_id)
 
         return jsonify({"status": "success", "message": f"User {user_id} deleted"}), 200
     except Exception as e:
@@ -986,7 +989,7 @@ def admin_update_user_role(user_id):
              return jsonify({"error": f"Database error updating role: {str(db_error)}"}), 500
         finally:
             if conn:
-                conn.close()
+                return_db_connection(conn)
 
     except Exception as e:
         print(f"Error initiating update for user {user_id} role: {e}")
@@ -1017,7 +1020,7 @@ def get_agentes():
         return jsonify({"error": str(e)}), 500
     finally:
         if conn:
-            conn.close()
+            return_db_connection(conn)
 
 @app.route('/api/agentes', methods=['POST'])
 def add_agente():
@@ -1058,7 +1061,7 @@ def add_agente():
             return jsonify({"error": f"Database error: {str(e)}"}), 500
         finally:
             if conn:
-                conn.close()
+                return_db_connection(conn)
 
     except Exception as e: # Catch errors from get_user_id_from_token or is_admin
          print(f"Auth error during add_agente: {e}")
@@ -1110,7 +1113,7 @@ def update_agente(id):
             return jsonify({"error": f"Database error: {str(e)}"}), 500
         finally:
             if conn:
-                conn.close()
+                return_db_connection(conn)
 
     except Exception as e: # Catch errors from get_user_id_from_token or is_admin
          print(f"Auth error during update_agente {id}: {e}")
@@ -1158,7 +1161,7 @@ def delete_agente(id):
             return jsonify({"error": f"Database error: {str(e)}"}), 500
         finally:
             if conn:
-                conn.close()
+                return_db_connection(conn)
 
     except Exception as e: # Catch errors from get_user_id_from_token or is_admin
          print(f"Auth error during delete_agente {id}: {e}")
@@ -1315,7 +1318,7 @@ def get_dashboard_stats():
         return jsonify({"error": str(e)}), 500
     finally:
         if conn:
-            conn.close()
+            return_db_connection(conn)
 
 
 @app.route('/api/dashboard/recent-activity', methods=['GET'])
@@ -1359,7 +1362,7 @@ def get_recent_activity():
         return jsonify({"error": str(e)}), 500
     finally:
         if conn:
-            conn.close()
+            return_db_connection(conn)
             
             
 # if __name__ == '__main__':
