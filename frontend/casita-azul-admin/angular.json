@@ -22,31 +22,31 @@
               {
                 "glob": "**/*",
                 "input": "public"
+              },
+              {
+                "glob": "_redirects",
+                "input": "src",
+                "output": "/"
               }
             ],
             "styles": [
               "src/styles.css"
-            ],
-            "server": "src/main.server.ts",
-            "outputMode": "server",
-            "ssr": {
-              "entry": "src/server.ts"
-            }
+            ]
           },
           "configurations": {
             "production": {
               "budgets": [
-              {
-                "type": "initial",
-                "maximumWarning": "1MB",
-                "maximumError": "1.5MB"
-              },
-              {
-                "type": "anyComponentStyle",
-                "maximumWarning": "15kB",
-                "maximumError": "20kB"
-              }
-            ],
+                {
+                  "type": "initial",
+                  "maximumWarning": "1MB",
+                  "maximumError": "1.5MB"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "15kB",
+                  "maximumError": "20kB"
+                }
+              ],
               "outputHashing": "all"
             },
             "development": {
