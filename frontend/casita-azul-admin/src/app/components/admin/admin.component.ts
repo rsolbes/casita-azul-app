@@ -173,6 +173,11 @@ export class AdminComponent implements OnInit {
     this.isNewMode = false; // Estamos editando
     this.errorMessage = ''; // Limpia error
     this.successMessage = ''; // Limpia éxito
+    setTimeout(() => {
+      if (this.editForm) {
+        this.editForm.form.markAllAsTouched();
+      }
+    }, 0);
   }
 
   // Lógica para el formulario de agregar (separada)
@@ -184,6 +189,11 @@ export class AdminComponent implements OnInit {
     this.isNewMode = true; // Estamos agregando
     this.errorMessage = ''; // Limpia error
     this.successMessage = ''; // Limpia éxito
+    setTimeout(() => {
+      if (this.addForm) {
+        this.addForm.form.markAllAsTouched();
+      }
+    }, 0);
   }
 
 
