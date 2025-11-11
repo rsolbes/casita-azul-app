@@ -69,30 +69,56 @@ def init_connections():
     
     # Initialize database pool
     try:
+        db_user = os.getenv("DB_USER")
+        db_password = os.getenv("PASSWORD")
+        db_host = os.getenv("HOST")
+        db_port = os.getenv("PORT", "6543")
+        db_name = os.getenv("DBNAME")
+        
+        print(f"🔍 Intentando conectar a PostgreSQL:")
+        print(f"   Host: {db_host}")
+        print(f"   Port: {db_port}")
+        print(f"   User: {db_user}")
+        print(f"   Database: {db_name}")
+        print(f"   Password: {'[CONFIGURED]' if db_password else '[MISSING]'}")
+        
+        if not all([db_user, db_password, db_host, db_name]):
+            raise ValueError(f"Faltan variables de entorno requeridas: DB_USER={bool(db_user)}, PASSWORD={bool(db_password)}, HOST={bool(db_host)}, DBNAME={bool(db_name)}")
+        
         _db_pool = pool.ThreadedConnectionPool(
             1,  # min connections
             5,  # max connections
-            user=os.getenv("DB_USER", "postgres.izozjytmktbuhpttczid"),
-            password=os.getenv("PASSWORD", "bddingsoftware123"),
-            host=os.getenv("HOST", "aws-1-us-east-2.pooler.supabase.com"),
-            port=os.getenv("PORT", "6543"),
-            dbname=os.getenv("DBNAME", "postgres"),
+            user=db_user,
+            password=db_password,
+            host=db_host,
+            port=db_port,
+            dbname=db_name,
             sslmode='require',
-            connect_timeout=10  # 10 second timeout
+            connect_timeout=30  # 30 second timeout (increased from 10)
         )
         print("✅ Database pool creado (1-5 conexiones)")
         
         # Test the connection
+        print("🔍 Probando conexión...")
         test_conn = _db_pool.getconn()
         cursor = test_conn.cursor()
-        cursor.execute("SELECT 1")
+        cursor.execute("SELECT 1 as test")
+        result = cursor.fetchone()
         cursor.close()
         _db_pool.putconn(test_conn)
-        print("✅ Conexión a base de datos verificada")
+        print(f"✅ Conexión a base de datos verificada (resultado: {result})")
         
     except Exception as e:
-        print(f"❌ Error creando pool de base de datos: {e}")
-        print(f"❌ Detalles: DB_USER={os.getenv('DB_USER')}, HOST={os.getenv('HOST')}, PORT={os.getenv('PORT')}, DBNAME={os.getenv('DBNAME')}")
+        print(f"❌ ERROR CRÍTICO creando pool de base de datos:")
+        print(f"❌ Tipo de error: {type(e).__name__}")
+        print(f"❌ Mensaje: {str(e)}")
+        print(f"❌ DB_USER: {os.getenv('DB_USER', '[NOT SET]')}")
+        print(f"❌ HOST: {os.getenv('HOST', '[NOT SET]')}")
+        print(f"❌ PORT: {os.getenv('PORT', '[NOT SET]')}")
+        print(f"❌ DBNAME: {os.getenv('DBNAME', '[NOT SET]')}")
+        print(f"❌ PASSWORD: {'[CONFIGURED]' if os.getenv('PASSWORD') else '[NOT SET]'}")
+        import traceback
+        traceback.print_exc()
         _db_pool = None
 
 # Initialize connections when app starts
@@ -203,9 +229,11 @@ def api_health_check():
         return '', 204
     
     db_status = "not_initialized"
+    db_error = None
     
     if _db_pool is None:
         db_status = "pool_not_initialized"
+        db_error = "Database pool was not created during startup. Check logs for initialization errors."
     else:
         conn = None
         try:
@@ -215,16 +243,42 @@ def api_health_check():
             cursor.close()
             db_status = "connected"
         except Exception as e:
-            db_status = f"error: {str(e)}"
+            db_status = f"error"
+            db_error = str(e)
         finally:
             if conn:
                 return_db_connection(conn)
     
-    return jsonify({
+    response = {
         "status": "ok",
         "database": db_status,
         "supabase_url": os.getenv("SUPABASE_URL", "https://izozjytmktbuhpttczid.supabase.co"),
         "cors_origins": origins_list,
+        "timestamp": datetime.utcnow().isoformat()
+    }
+    
+    if db_error:
+        response["database_error"] = db_error
+    
+    return jsonify(response), 200
+
+@app.route('/api/debug/config', methods=['GET'])
+def debug_config():
+    """Endpoint de diagnóstico para verificar configuración (SOLO PARA DEBUG)"""
+    return jsonify({
+        "environment_variables": {
+            "DB_USER": "✅ Configured" if os.getenv("DB_USER") else "❌ Missing",
+            "PASSWORD": "✅ Configured" if os.getenv("PASSWORD") else "❌ Missing",
+            "HOST": os.getenv("HOST", "❌ Missing"),
+            "PORT": os.getenv("PORT", "❌ Missing"),
+            "DBNAME": os.getenv("DBNAME", "❌ Missing"),
+            "SUPABASE_URL": "✅ Configured" if os.getenv("SUPABASE_URL") else "❌ Missing",
+            "SUPABASE_ANON_KEY": "✅ Configured" if os.getenv("SUPABASE_ANON_KEY") else "❌ Missing",
+            "SUPABASE_SERVICE_KEY": "✅ Configured" if os.getenv("SUPABASE_SERVICE_KEY") else "❌ Missing",
+            "CORS_ORIGINS": os.getenv("CORS_ORIGINS", "❌ Missing"),
+        },
+        "database_pool_status": "initialized" if _db_pool else "not_initialized",
+        "supabase_client_status": "initialized" if _supabase_client else "not_initialized",
         "timestamp": datetime.utcnow().isoformat()
     }), 200
 
