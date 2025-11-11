@@ -11,13 +11,12 @@ from dotenv import load_dotenv
 load_dotenv()
 
 app = Flask(__name__)
-origins = [
-    "http://localhost:4200",  # Tu app de admin
-    "http://localhost:50687", # Tu otra app
-    "http://127.0.0.1:4200",   # A veces es necesario agregar 127.0.0.1 también
-    "http://127.0.0.1:50687"
-]
-CORS(app, resources={r"/api/*": {"origins": origins}}, supports_credentials=True)
+CORS_ORIGINS = os.getenv("CORS_ORIGINS", "http://localhost:4200,http://localhost:50687")
+origins_list = CORS_ORIGINS.split(',')
+
+print(f"✅ Orígenes CORS permitidos: {origins_list}")
+
+CORS(app, resources={r"/api/*": {"origins": origins_list}}, supports_credentials=True)
 
 
 # Configuración de Supabase
@@ -1316,7 +1315,7 @@ def get_recent_activity():
             conn.close()
             
             
-if __name__ == '__main__':
-    # Consider using a more production-ready server like Gunicorn/Waitress
-    # and disabling debug mode for production
-    app.run(debug=True, host='0.0.0.0') # Listen on all interfaces if running in Docker/cloud
+# if __name__ == '__main__':
+#     # Consider using a more production-ready server like Gunicorn/Waitress
+#     # and disabling debug mode for production
+#     app.run(debug=True, host='0.0.0.0') # Listen on all interfaces if running in Docker/cloud
