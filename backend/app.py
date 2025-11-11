@@ -11,12 +11,40 @@ from dotenv import load_dotenv
 load_dotenv()
 
 app = Flask(__name__)
-CORS_ORIGINS = os.getenv("CORS_ORIGINS", "http://localhost:4200,http://localhost:50687")
-origins_list = CORS_ORIGINS.split(',')
+CORS_ORIGINS = os.getenv(
+    "CORS_ORIGINS",
+    "https://app-externos.netlify.app,https://casita-azul-admin.netlify.app,http://localhost:4200,http://localhost:50687"
+)
+origins_list = [origin.strip() for origin in CORS_ORIGINS.split(',')]
+CORS(
+    app,
+    resources={
+        r"/api/*": {
+            "origins": origins_list,
+            "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+            "allow_headers": ["Content-Type", "Authorization"],
+            "supports_credentials": True,
+            "max_age": 3600  # Cache preflight por 1 hora
+        }
+    }
+)
 
+@app.before_request
+def handle_preflight():
+    from flask import request
+    if request.method == "OPTIONS":
+        response = app.make_default_options_response()
+        origin = request.headers.get('Origin')
+        if origin in origins_list:
+            response.headers['Access-Control-Allow-Origin'] = origin
+            response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS, PATCH'
+            response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+            response.headers['Access-Control-Allow-Credentials'] = 'true'
+            response.headers['Access-Control-Max-Age'] = '3600'
+        return response
+    
+    
 print(f"✅ Orígenes CORS permitidos: {origins_list}")
-
-CORS(app, resources={r"/api/*": {"origins": origins_list}}, supports_credentials=True)
 
 
 # Configuración de Supabase
