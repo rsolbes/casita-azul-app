@@ -1,42 +1,63 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
 // Define an interface for the User object expected from the backend
 export interface AdminUser {
   id: string;
   email: string;
-  role?: string; // Role might come from profiles, fetched separately or joined
+  role?: string;
   created_at?: string;
-  // Add other fields returned by supabase_admin.auth.admin.list_users() if needed
 }
 
 @Injectable({
   providedIn: 'root'
 })
 export class AdminService {
-  private apiUrl = 'https://casita-azul-app.onrender.com/api';
+  private apiUrl = 'https://casita-azul-app.onrender.com/api/admin/users';
 
   constructor(private http: HttpClient) {}
 
-  // Fetch all users (requires admin)
+  /**
+   * Obtiene el token de autorización del localStorage
+   */
+  private getAuthHeaders(): HttpHeaders {
+    const token = localStorage.getItem('access_token');
+    return new HttpHeaders({
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    });
+  }
+
+  /**
+   * Fetch all users (requires admin)
+   */
   getUsers(): Observable<AdminUser[]> {
-    return this.http.get<AdminUser[]>(this.apiUrl);
+    const headers = this.getAuthHeaders();
+    return this.http.get<AdminUser[]>(this.apiUrl, { headers });
   }
 
-  // Create a new user (requires admin)
-  createUser(userData: { email: string; password?: string; role: string }): Observable<AdminUser> {
-    // Password might be optional if you handle resets separately
-    return this.http.post<AdminUser>(this.apiUrl, userData);
+  /**
+   * Create a new user (requires admin)
+   */
+  createUser(userData: { email: string; password: string; role: string }): Observable<AdminUser> {
+    const headers = this.getAuthHeaders();
+    return this.http.post<AdminUser>(this.apiUrl, userData, { headers });
   }
 
-  // Update a user's role (requires admin)
+  /**
+   * Update a user's role (requires admin)
+   */
   updateUserRole(userId: string, role: string): Observable<any> {
-    return this.http.put(`${this.apiUrl}/${userId}/role`, { role });
+    const headers = this.getAuthHeaders();
+    return this.http.put(`${this.apiUrl}/${userId}/role`, { role }, { headers });
   }
 
-  // Delete a user (requires admin)
+  /**
+   * Delete a user (requires admin)
+   */
   deleteUser(userId: string): Observable<any> {
-    return this.http.delete(`${this.apiUrl}/${userId}`);
+    const headers = this.getAuthHeaders();
+    return this.http.delete(`${this.apiUrl}/${userId}`, { headers });
   }
 }
